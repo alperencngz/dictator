@@ -7,22 +7,46 @@ defaults on first run. Everything is overridable from there.
 from __future__ import annotations
 
 import copy
+import threading
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+# Serializes save_value's read-modify-write: it can be called from the main
+# thread (menu/HUD toggle) and the dashboard's HTTP thread concurrently.
+_SAVE_LOCK = threading.Lock()
+
 CONFIG_DIR = Path.home() / ".dictate"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 
 DEFAULTS: dict[str, Any] = {
+    # --- Mode ---
+    # batch -> hold key, speak, release; transcribe the whole clip then paste
+    #          (lowest CPU, most accurate, ~1-2s delay after you release).
+    # live  -> while you hold the key a fast model types a stable partial at the
+    #          cursor as you speak; on release the accurate main model produces
+    #          the final text and the live-typed text is reconciled to it. Higher
+    #          CPU/battery (the fast model re-runs on rolling snapshots). Uses the
+    #          same capture pipeline as batch, so live utterances are stored and
+    #          can be Regenerated just like batch ones. ("streaming" is accepted
+    #          as a legacy alias for "live".)
+    "mode": "batch",
+
     # --- Model / transcription ---
     # 'small' is the sweet spot for TR+EN on Apple Silicon CPU: ~2s/utterance,
     # accurate. 'base' is faster but weaker on Turkish. 'large-v3-turbo' is the
     # most accurate multilingual option but ~4x slower here (no Metal backend).
     # NOTE: distil-* models are ENGLISH-ONLY — do not use them for Turkish.
     "model": "small",
-    "language": None,             # None = autodetect (TR/EN). Or force e.g. "en", "tr".
+    # language: None = autodetect, but constrained to `languages` below so a
+    # short clip is never mis-decoded as an unrelated language. Force a single
+    # language by setting e.g. "en" or "tr" (skips detection entirely).
+    "language": None,
+    # Candidate languages for autodetect (ISO codes). Keep this to the languages
+    # you actually speak; detection picks the most likely ONE per utterance
+    # (mixed TR/EN is transcribed in whichever dominates). [] = all 99 languages.
+    "languages": ["tr", "en"],
     "compute_type": "auto",       # auto | int8 | int8_float16 | float16 | float32
     "device": "auto",             # auto | cpu | cuda  (Apple Silicon uses cpu/int8)
     "vad_filter": True,           # drop silence with built-in VAD
@@ -37,6 +61,11 @@ DEFAULTS: dict[str, Any] = {
     "ptt_key": "<alt_r>",         # Right Option ⌥
     # Toggle: tap to start, tap to stop. null = disabled (no key bound).
     "toggle_key": None,
+    # Swallow (consume) the PTT key so it doesn't also reach the focused app.
+    # When true (and the PTT key is a modifier), Right Option no longer acts as a
+    # normal Option modifier while dictate runs — use LEFT Option for Option-typing.
+    # Set false to keep the key passing through (its plain modifier still works).
+    "swallow_ptt": True,
 
     # --- Text insertion ---
     # paste  -> set clipboard + simulate Cmd/Ctrl+V (fast, reliable)
@@ -46,9 +75,33 @@ DEFAULTS: dict[str, Any] = {
     "restore_clipboard": True,        # put the old clipboard back after pasting
     "trailing_space": True,           # append a space after inserted text
 
-    # --- Feedback ---
+    # --- Live mode (only used when mode == "live") ---
+    # A small fast model transcribes the live partials typed at the cursor as you
+    # speak; the main `model` above produces the accurate final text on release.
+    "realtime_model": "tiny",         # tiny/base = snappy partials; "" reuses `model`
+    "streaming_live_typing": False,   # False (default, safe): live partials render in
+                                      # the HUD and the accurate final text is pasted
+                                      # once on release. True types words live at the
+                                      # cursor while you speak — risky while a modifier
+                                      # PTT key is held (⌥+key contamination, ⌥⌫ deletes
+                                      # a whole word); enable only after verifying the
+                                      # modifier-contamination experiment (see guide P5).
+    "post_speech_silence_duration": 0.6,  # silence (s) that marks end-of-utterance
+
+    # --- History / voice clips (batch mode) ---
+    # Store each utterance (text + a local WAV of your voice) under ~/.dictate so
+    # the HUD can show history and the Regenerate button can re-transcribe a clip.
+    "save_audio": True,               # keep voice clips locally, on-device (needed for Regenerate)
+    "history_keep": 100,              # max clips retained on disk (older ones are pruned)
+    "history_shown": 20,              # number of recent rows shown in the HUD history list
+
+    # --- Feedback / UI ---
     "sound_feedback": True,           # start/stop chime
     "menu_bar": True,                 # macOS menu-bar status indicator (rumps)
+    # The dashboard window is now the app view; the old floating HUD is off by
+    # default. Set show_hud: true to also get the little always-on-top panel.
+    "show_hud": False,                # floating status window: live state, transcript, Record button
+    "open_dashboard_on_launch": True, # open the dashboard window automatically on start
 }
 
 
@@ -72,3 +125,23 @@ def load_config() -> dict[str, Any]:
     with open(CONFIG_PATH) as f:
         user = yaml.safe_load(f) or {}
     return _deep_merge(DEFAULTS, user)
+
+
+def save_value(key: str, value: Any) -> None:
+    """Persist a single top-level config key to ~/.dictate/config.yaml.
+
+    Loads the on-disk config, sets ``key`` to ``value``, and writes it back
+    preserving every other key and the file's formatting conventions
+    (``sort_keys=False``, ``allow_unicode=True``). If the file doesn't exist
+    yet it is seeded from DEFAULTS first. Used by the runtime mode toggle.
+    """
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with _SAVE_LOCK:
+        if CONFIG_PATH.exists():
+            with open(CONFIG_PATH) as f:
+                data = yaml.safe_load(f) or {}
+        else:
+            data = copy.deepcopy(DEFAULTS)
+        data[key] = value
+        with open(CONFIG_PATH, "w") as f:
+            yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)

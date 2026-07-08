@@ -8,7 +8,7 @@ with no temp-file round trip.
 
 from __future__ import annotations
 
-import queue
+import threading
 
 import numpy as np
 import sounddevice as sd
@@ -43,7 +43,11 @@ class BufferRecorder:
         self.device = device
         self.sample_rate = sample_rate
         self.max_seconds = max_seconds
-        self._q: queue.Queue[np.ndarray] = queue.Queue()
+        # Captured chunks accumulate in a list guarded by a lock (rather than a
+        # drain-once queue) so snapshot() can copy them mid-capture without
+        # disturbing the eventual stop() concatenation.
+        self._chunks: list[np.ndarray] = []
+        self._buf_lock = threading.Lock()
         self._stream: sd.InputStream | None = None
         self._frames = 0
         self._max_frames = sample_rate * max_seconds
@@ -51,12 +55,26 @@ class BufferRecorder:
     def _callback(self, indata, frames, time_info, status):  # noqa: ARG002
         if self._frames >= self._max_frames:
             return
-        self._q.put(indata.copy())
-        self._frames += frames
+        chunk = indata.copy()
+        with self._buf_lock:
+            self._chunks.append(chunk)
+            self._frames += frames
+
+    def _concat(self) -> np.ndarray:
+        """Concatenate the accumulated chunks into a fresh mono float32 array."""
+        with self._buf_lock:
+            chunks = list(self._chunks)  # shallow copy of the list of arrays
+        if not chunks:
+            return np.zeros(0, dtype=np.float32)
+        audio = np.concatenate(chunks, axis=0)
+        if audio.ndim > 1:
+            audio = audio[:, 0]
+        return audio.astype(np.float32)
 
     def start(self) -> None:
-        self._q = queue.Queue()
-        self._frames = 0
+        with self._buf_lock:
+            self._chunks = []
+            self._frames = 0
         self._stream = sd.InputStream(
             device=self.device,
             channels=1,
@@ -66,21 +84,21 @@ class BufferRecorder:
         )
         self._stream.start()
 
+    def snapshot(self) -> np.ndarray:
+        """Return a COPY of the audio captured so far, without stopping.
+
+        Thread-safe against the audio callback; used by live mode to run
+        partial transcriptions while capture continues.
+        """
+        return self._concat()
+
     def stop(self) -> np.ndarray:
         """Stop and return the captured mono float32 audio."""
         if self._stream is not None:
             self._stream.stop()
             self._stream.close()
             self._stream = None
-        chunks = []
-        while not self._q.empty():
-            chunks.append(self._q.get())
-        if not chunks:
-            return np.zeros(0, dtype=np.float32)
-        audio = np.concatenate(chunks, axis=0)
-        if audio.ndim > 1:
-            audio = audio[:, 0]
-        return audio.astype(np.float32)
+        return self._concat()
 
     @property
     def seconds(self) -> float:

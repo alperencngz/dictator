@@ -63,7 +63,7 @@ def test_insert(text):
 
 @main.command()
 def doctor():
-    """Check dependencies and macOS permissions guidance."""
+    """Check dependencies and probe macOS permissions with real tests."""
     import sys
     click.echo(f"python: {sys.version.split()[0]}  platform: {sys.platform}")
     for mod in ("faster_whisper", "sounddevice", "pynput", "pyperclip", "rumps"):
@@ -72,8 +72,49 @@ def doctor():
             click.echo(f"  ✅ {mod}")
         except Exception as e:
             click.echo(f"  ❌ {mod}: {e}")
-    if sys.platform == "darwin":
-        click.echo("\nmacOS permissions required (System Settings → Privacy & Security):")
-        click.echo("  • Microphone        → your terminal / app")
-        click.echo("  • Accessibility     → for simulating Cmd+V / typing")
-        click.echo("  • Input Monitoring  → for the global hotkey")
+
+    if sys.platform != "darwin":
+        return
+
+    click.echo("\nmacOS permissions (probed live for THIS process):")
+
+    # Accessibility gates BOTH the pynput global hotkey listener (it installs a
+    # CGEventTap) AND synthetic ⌘V / typing injection. Input Monitoring does NOT
+    # gate the hotkey here — that was long-standing misinformation. This result
+    # reflects the process running `doctor` (your terminal), NOT Dictate.app.
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        trusted = bool(AXIsProcessTrusted())
+        mark = "✅" if trusted else "❌"
+        state = "trusted" if trusted else "NOT trusted"
+        click.echo(f"  {mark} Accessibility: {state} "
+                   f"(gates the global hotkey AND paste/type injection)")
+        if not trusted:
+            click.echo("      → System Settings → Privacy & Security → Accessibility:")
+            click.echo("        add your terminal app and toggle it ON, then restart it.")
+    except Exception as e:
+        click.echo(f"  ⚠️  Accessibility: could not check ({e})")
+
+    # Microphone: actually capture ~0.3s and report the RMS level. ~0.0 means no
+    # Microphone grant, a muted mic, or the wrong input_device. This may pop a
+    # permission prompt for your terminal the first time — that's expected.
+    try:
+        import numpy as np
+        import sounddevice as sd
+        sr = 16000
+        rec = sd.rec(int(0.3 * sr), samplerate=sr, channels=1, dtype="float32")
+        sd.wait()
+        rms = float(np.sqrt(np.mean(np.square(rec))))
+        if rms > 1e-5:
+            click.echo(f"  ✅ Microphone: capturing audio (RMS={rms:.5f})")
+        else:
+            click.echo(f"  ❌ Microphone: silent (RMS={rms:.5f}) — no grant, muted, "
+                       f"or wrong input_device (see `dictate devices`)")
+    except Exception as e:
+        click.echo(f"  ⚠️  Microphone: could not read ({e})")
+
+    click.echo("\nGrants attach per app identity and do NOT transfer:")
+    click.echo("  • your terminal app  → for `dictate run`")
+    click.echo("  • Dictate.app        → for the bundled app (grant it separately)")
+    click.echo("  Input Monitoring: grant it only if macOS lists the app there and "
+               "keys still don't arrive after Accessibility is on.")

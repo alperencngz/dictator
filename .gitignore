@@ -5,3 +5,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# RealtimeSTT's worker writes this into the process cwd (streaming mode only).
+realtimesst.log

@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dictate</title>
+<style>
+  :root {
+    --bg: #0a0b0a;
+    --surface: #141613;
+    --surface-2: #1a1d18;
+    --surface-3: #20241d;
+    --border: #262a24;
+    --border-strong: #34392f;
+    --text: #f2f4f0;
+    --muted: #9aa295;
+    --faint: #6b7266;
+    --accent: #b6f24a;
+    --accent-ink: #10140a;
+    --accent-dim: rgba(182, 242, 74, 0.13);
+    --bad: #f0736b;
+    --bad-dim: rgba(240, 115, 107, 0.14);
+    --radius: 14px;
+    --radius-sm: 9px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ::selection { background: var(--accent-dim); }
+
+  /* ---------- shell ---------- */
+  .app {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    min-height: 100dvh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .side {
+    border-right: 1px solid var(--border);
+    padding: 22px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: linear-gradient(180deg, #0c0e0c, var(--bg));
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 8px 18px;
+  }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: #0a0b0a;
+    box-shadow: 0 0 0 4px var(--accent-dim);
+  }
+  .brand-name { font-weight: 640; letter-spacing: -0.01em; font-size: 16px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav a {
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 11px; border-radius: var(--radius-sm);
+    color: var(--muted); text-decoration: none;
+    font-weight: 500; font-size: 14.5px;
+    transition: background .15s, color .15s;
+    cursor: pointer;
+  }
+  .nav a svg { width: 17px; height: 17px; opacity: .85; }
+  .nav a:hover { background: var(--surface-2); color: var(--text); }
+  .nav a.active { background: var(--surface-2); color: var(--text); }
+  .nav a.active svg { color: var(--accent); opacity: 1; }
+  .side-spacer { flex: 1; }
+  .chip-device {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px; margin-bottom: 8px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .profile {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: background .15s;
+  }
+  .profile:hover { background: var(--surface-2); }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: #0a0b0a;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 12px;
+  }
+  .profile-name { font-size: 13.5px; font-weight: 550; }
+  .profile-sub { font-size: 11px; color: var(--faint); }
+
+  /* ---------- main ---------- */
+  .main { padding: 30px 34px 60px; max-width: 1180px; }
+  .topbar { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 26px; }
+  .topbar h1 { font-size: 22px; font-weight: 640; letter-spacing: -0.02em; margin: 0; }
+  .topbar p { margin: 3px 0 0; color: var(--faint); font-size: 13.5px; }
+  .rec-btn {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border); border-radius: 100px;
+    padding: 7px 13px; background: var(--surface);
+  }
+  .rec-btn kbd {
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    background: var(--surface-3); border: 1px solid var(--border-strong);
+    border-radius: 5px; padding: 1px 6px;
+  }
+
+  /* ---------- stat cards ---------- */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 26px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .stat::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120% 90% at 100% 0%, var(--accent-dim), transparent 55%);
+    opacity: .6; pointer-events: none;
+  }
+  .stat-head { display: flex; align-items: center; gap: 9px; }
+  .stat-head svg { width: 15px; height: 15px; color: var(--accent); }
+  .stat-num { font-size: 40px; font-weight: 680; letter-spacing: -0.03em; line-height: 1; }
+  .stat-num small { font-size: 19px; font-weight: 560; color: var(--muted); letter-spacing: 0; margin-left: 2px; }
+  .stat-sub { color: var(--faint); font-size: 13px; margin-top: -2px; }
+
+  /* ---------- transcriptions panel ---------- */
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 8px 12px;
+  }
+  .panel > .eyebrow { padding: 0 16px 6px; display: block; }
+  .daygroup { padding: 0; }
+  .dayhead {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 18px 16px 8px;
+  }
+  .dayhead b { font-size: 14px; font-weight: 600; }
+  .dayhead span { font-size: 12px; color: var(--faint); font-family: var(--mono); }
+
+  .row {
+    border-radius: var(--radius-sm);
+    margin: 1px 6px;
+    transition: background .13s;
+  }
+  .row.open { background: var(--surface-2); }
+  .row-main {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 14px; align-items: center;
+    padding: 11px 12px; cursor: pointer;
+  }
+  .row:not(.open) .row-main:hover { background: var(--surface-2); border-radius: var(--radius-sm); }
+  .appicon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: grid; place-items: center; color: var(--muted);
+  }
+  .appicon svg { width: 19px; height: 19px; }
+  .row-body { min-width: 0; }
+  .row-text {
+    font-size: 14.5px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row.open .row-text { white-space: normal; }
+  .row-meta { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
+  .row-app { font-size: 12px; color: var(--faint); }
+  .tag {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border-strong); color: var(--muted);
+  }
+  .tag.live { color: var(--accent); border-color: rgba(182,242,74,.32); }
+  .tag.bad { color: var(--bad); border-color: rgba(240,115,107,.35); }
+  .row-time { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .row-text.failed { color: var(--bad); }
+  .row-text.empty { color: var(--faint); font-style: italic; }
+
+  /* ---------- expanded detail ---------- */
+  .detail {
+    display: none;
+    padding: 4px 14px 16px 66px;
+  }
+  .row.open .detail { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .bubble {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 13px 15px;
+    font-size: 14.5px; line-height: 1.55; color: var(--text);
+    position: relative;
+  }
+  .bubble-text { display: block; padding-right: 26px; white-space: pre-wrap; word-break: break-word; }
+  .bubble.failed { color: var(--bad); background: var(--bad-dim); border-color: rgba(240,115,107,.28); }
+  .player {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 14px;
+  }
+  .iconbtn {
+    width: 34px; height: 34px; border-radius: 9px;
+    border: 1px solid var(--border-strong); background: var(--surface-2);
+    color: var(--text); display: grid; place-items: center; cursor: pointer;
+    transition: background .13s, border-color .13s, color .13s;
+  }
+  .iconbtn:hover { background: var(--surface-3); border-color: var(--faint); }
+  .iconbtn svg { width: 16px; height: 16px; }
+  .iconbtn.play { background: var(--accent); color: #0a0b0a; border-color: var(--accent); }
+  .iconbtn.play:hover { filter: brightness(1.06); }
+  .wave { flex: 1; height: 34px; position: relative; cursor: pointer; }
+  .wave canvas { width: 100%; height: 100%; display: block; }
+  .time { font-family: var(--mono); font-size: 11px; color: var(--faint); min-width: 30px; text-align: right; }
+
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .seg {
+    display: inline-flex; border: 1px solid var(--border-strong);
+    border-radius: 8px; overflow: hidden; background: var(--surface-2);
+  }
+  .seg button {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .03em;
+    padding: 6px 11px; background: none; border: none; color: var(--muted); cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.on { background: var(--accent-dim); color: var(--accent); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 13px; font-weight: 550;
+    padding: 7px 13px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
+    transition: background .13s, border-color .13s;
+  }
+  .btn:hover { background: var(--surface-3); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.primary { background: var(--accent); color: #0a0b0a; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 7px 9px; }
+  .btn.ghost:hover { color: var(--text); background: var(--surface-2); }
+  .spacer { flex: 1; }
+  .no-audio { margin-top: 12px; font-size: 12.5px; color: var(--faint); font-style: italic; }
+
+  /* ---------- empty / error state ---------- */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 12px; padding: 54px 24px 46px; color: var(--muted);
+  }
+  .empty .empty-mark {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: grid; place-items: center; color: var(--accent);
+  }
+  .empty .empty-mark svg { width: 22px; height: 22px; }
+  .empty b { font-size: 15px; font-weight: 600; color: var(--text); }
+  .empty p { margin: 0; font-size: 13.5px; color: var(--faint); max-width: 340px; }
+  .empty kbd {
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    background: var(--surface-3); border: 1px solid var(--border-strong);
+    border-radius: 5px; padding: 1px 6px;
+  }
+
+  /* ---------- settings ---------- */
+  .setcard {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 18px;
+  }
+  .setcard > .eyebrow { display: block; padding: 18px 18px 4px; }
+  .setrow {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 16px 18px; border-top: 1px solid var(--border);
+  }
+  .setcard > .eyebrow + .setrow { border-top: none; }
+  .setrow .set-label { font-size: 14.5px; font-weight: 550; }
+  .setrow .set-desc { font-size: 12.5px; color: var(--faint); margin-top: 3px; max-width: 460px; }
+  .switch {
+    width: 46px; height: 27px; border-radius: 100px;
+    background: var(--surface-3); border: 1px solid var(--border-strong);
+    position: relative; cursor: pointer; flex: none;
+    transition: background .15s, border-color .15s;
+  }
+  .switch.on { background: var(--accent); border-color: var(--accent); }
+  .switch .knob {
+    position: absolute; top: 2px; left: 2px; width: 21px; height: 21px;
+    border-radius: 50%; background: var(--text); transition: transform .15s, background .15s;
+  }
+  .switch.on .knob { transform: translateX(19px); background: var(--accent-ink); }
+
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface-3); border: 1px solid var(--border-strong);
+    color: var(--text); padding: 10px 16px; border-radius: 10px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 15px; height: 15px; color: var(--accent); }
+
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    .side { display: none; }
+    .stats { grid-template-columns: 1fr; }
+    .main { padding: 22px 18px 50px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v10"/><path d="M8 8a4 4 0 0 0 8 0"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/></svg>
+      </div>
+      <div class="brand-name">Dictate</div>
+    </div>
+    <nav class="nav">
+      <a data-view="home" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>Home</a>
+      <a data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</a>
+    </nav>
+    <div class="side-spacer"></div>
+    <div class="chip-device"><span class="dot"></span> 100% on-device</div>
+    <div class="profile">
+      <div class="avatar">AÖ</div>
+      <div>
+        <div class="profile-name">Alperen Cengiz Öztürk</div>
+        <div class="profile-sub">Turkish · English</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ============ HOME ============ -->
+    <section id="view-home">
+      <div class="topbar">
+        <div>
+          <h1>Home</h1>
+          <p>Everything below stays on your Mac — audio never leaves the device.</p>
+        </div>
+        <div class="rec-btn">Hold <kbd>Right ⌥</kbd> to dictate</div>
+      </div>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="stat-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h12M4 17h9"/></svg><span class="eyebrow">Words dictated</span></div>
+          <div class="stat-num tnum" id="stat-words">0</div>
+          <div class="stat-sub" id="stat-words-sub">across 0 dictations</div>
+        </div>
+        <div class="stat">
+          <div class="stat-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 4 14h7l-1 7 9-11h-7z"/></svg><span class="eyebrow">Dictation speed</span></div>
+          <div class="stat-num tnum" id="stat-wpm">0<small> wpm</small></div>
+          <div class="stat-sub" id="stat-wpm-sub">start dictating</div>
+        </div>
+        <div class="stat">
+          <div class="stat-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3s5 4 5 9a5 5 0 0 1-10 0c0-2 1-3 1-3s3 1 4-6z"/></svg><span class="eyebrow">Day streak</span></div>
+          <div class="stat-num tnum" id="stat-streak">0<small> days</small></div>
+          <div class="stat-sub" id="stat-streak-sub">start today</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <span class="eyebrow">Recent transcriptions</span>
+        <div id="list"></div>
+      </section>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" hidden>
+      <div class="topbar">
+        <div>
+          <h1>Settings</h1>
+          <p>Changes apply immediately and are saved to <span style="font-family:var(--mono)">~/.dictate/config.yaml</span>.</p>
+        </div>
+      </div>
+
+      <div class="setcard">
+        <span class="eyebrow">Dictation</span>
+        <div class="setrow">
+          <div>
+            <div class="set-label">Mode</div>
+            <div class="set-desc"><b>Final only</b> transcribes the whole clip once you release the key. <b>Live</b> types a fast partial as you speak, then reconciles to the accurate final text.</div>
+          </div>
+          <div class="seg" id="set-mode">
+            <button data-v="batch">Final only</button>
+            <button data-v="live">Live</button>
+          </div>
+        </div>
+        <div class="setrow">
+          <div>
+            <div class="set-label">Language</div>
+            <div class="set-desc"><b>Auto</b> detects Turkish or English per utterance. Pin a single language to skip detection on short clips.</div>
+          </div>
+          <div class="seg" id="set-lang">
+            <button data-v="">Auto</button>
+            <button data-v="en">EN</button>
+            <button data-v="tr">TR</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="setcard">
+        <span class="eyebrow">Keyboard</span>
+        <div class="setrow">
+          <div>
+            <div class="set-label">Swallow Right ⌥</div>
+            <div class="set-desc">Consume the push-to-talk key so Right Option doesn't also reach the focused app while you dictate. Use Left Option for Option-typing when this is on.</div>
+          </div>
+          <div class="switch" id="set-swallow" role="switch" aria-label="Swallow Right Option"><span class="knob"></span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11L4 12"/></svg><span id="toast-msg">Copied</span></div>
+
+<script>
+const TOKEN = "__DICTATE_TOKEN__";
+
+/* ---------------- API helpers (token on every request) ---------------- */
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ "X-Dictate-Token": TOKEN }, opts.headers || {});
+  return fetch(path, opts);
+}
+async function apiJSON(path, opts) {
+  const r = await api(path, opts);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+function postJSON(path, body) {
+  return apiJSON(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+// media/download can't send headers, so token rides as ?t=
+function mediaURL(path, id) {
+  return path + "/" + encodeURIComponent(id) + "?t=" + encodeURIComponent(TOKEN);
+}
+
+/* ---------------- icons ---------------- */
+const ICONS = {
+  terminal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>',
+  slack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="10" width="6" height="3" rx="1.5"/><rect x="11" y="4" width="3" height="6" rx="1.5"/><rect x="14" y="11" width="6" height="3" rx="1.5"/><rect x="10" y="14" width="3" height="6" rx="1.5"/></svg>',
+  cursor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13 5l-2 14"/></svg>',
+  notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h6M9 16h4"/></svg>',
+  safari: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z" fill="currentColor" stroke="none"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>',
+};
+function iconFor(appName) {
+  const a = (appName || "").toLowerCase();
+  if (a.includes("slack")) return ICONS.slack;
+  if (a.includes("cursor")) return ICONS.cursor;
+  if (a.includes("note")) return ICONS.notes;
+  if (a.includes("safari")) return ICONS.safari;
+  if (a.includes("term") || a.includes("iterm")) return ICONS.terminal;
+  return ICONS.mic;
+}
+
+/* ---------------- misc ---------------- */
+const fmt = s => { s = Math.max(0, s || 0); const m = Math.floor(s / 60), r = Math.round(s % 60); return m + ":" + String(r).padStart(2, "0"); };
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+function flatPeaks(n) { return new Array(n).fill(0.12); }
+
+let toastT;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  document.getElementById("toast-msg").textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("show"), 1900);
+}
+
+/* ---------------- stats ---------------- */
+function renderStats(s) {
+  s = s || {};
+  const words = Number(s.words || 0);
+  const wpm = Number(s.wpm || 0);
+  const streak = Number(s.streak || 0);
+  const dictations = Number(s.dictations || 0);
+
+  document.getElementById("stat-words").textContent = words.toLocaleString();
+  document.getElementById("stat-words-sub").textContent =
+    "across " + dictations.toLocaleString() + " dictation" + (dictations === 1 ? "" : "s");
+
+  document.getElementById("stat-wpm").innerHTML = Math.round(wpm) + "<small> wpm</small>";
+  document.getElementById("stat-wpm-sub").textContent =
+    wpm > 0 ? (wpm / 40).toFixed(1) + "× faster than typing" : "start dictating";
+
+  document.getElementById("stat-streak").innerHTML = streak + "<small> day" + (streak === 1 ? "" : "s") + "</small>";
+  document.getElementById("stat-streak-sub").textContent = streak > 0 ? "keep it going" : "start today";
+}
+
+/* ---------------- list ---------------- */
+const list = document.getElementById("list");
+
+function renderList(groups, preferredOpenId) {
+  list.innerHTML = "";
+  closeAllPlayers();
+  const hasItems = Array.isArray(groups) && groups.some(g => g.items && g.items.length);
+  if (!hasItems) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.innerHTML =
+      '<div class="empty-mark">' + ICONS.mic + '</div>' +
+      '<b>No transcriptions yet</b>' +
+      '<p>Hold <kbd>Right ⌥</kbd> and speak — everything you dictate shows up here, on-device, ready to replay.</p>';
+    list.appendChild(e);
+    return;
+  }
+
+  groups.forEach(group => {
+    if (!group.items || !group.items.length) return;
+    const gh = document.createElement("div");
+    gh.className = "dayhead";
+    const b = document.createElement("b"); b.textContent = group.group || "";
+    const sp = document.createElement("span"); sp.textContent = group.date || "";
+    gh.appendChild(b); gh.appendChild(sp);
+    list.appendChild(gh);
+
+    group.items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.dataset.id = it.id;
+      const textCls = it.status === "failed" ? "failed" : it.status === "empty" ? "empty" : "";
+      const tags = it.status === "ok"
+        ? '<span class="tag ' + (it.mode === "Live" ? "live" : "") + '">' + it.mode + '</span><span class="tag">' + it.lang + '</span>'
+        : '<span class="tag bad">' + it.status + '</span>';
+      row.innerHTML =
+        '<div class="row-main">' +
+          '<div class="appicon">' + iconFor(it.app) + '</div>' +
+          '<div class="row-body">' +
+            '<div class="row-text ' + textCls + '"></div>' +
+            '<div class="row-meta"><span class="row-app"></span>' + tags + '</div>' +
+          '</div>' +
+          '<div class="row-time tnum">' + (it.time || "") + '</div>' +
+        '</div>' +
+        '<div class="detail"></div>';
+      row.querySelector(".row-text").textContent = it.text || "";
+      row.querySelector(".row-app").textContent = it.app || "—";
+      row.querySelector(".row-main").addEventListener("click", () => toggle(row, it));
+      list.appendChild(row);
+    });
+  });
+
+  // Open the preferred row (preserved across a live refresh) or, failing that,
+  // the newest — so a just-dictated line opens itself.
+  requestAnimationFrame(() => {
+    let target = null;
+    if (preferredOpenId) {
+      for (const r of list.querySelectorAll(".row")) {
+        if (r.dataset.id === preferredOpenId) { target = r.querySelector(".row-main"); break; }
+      }
+    }
+    if (!target) target = list.querySelector(".row .row-main");
+    if (target) target.click();
+  });
+}
+
+/* ---------------- row detail ---------------- */
+const players = {};
+
+function toggle(row, it) {
+  const id = it.id;
+  const open = row.classList.contains("open");
+  document.querySelectorAll(".row.open").forEach(r => {
+    if (r !== row) { r.classList.remove("open"); closePlayer(r.dataset.id); }
+  });
+  if (open) { row.classList.remove("open"); closePlayer(id); return; }
+  row.classList.add("open");
+  buildDetail(row, it);
+}
+
+function buildDetail(row, it) {
+  const id = it.id;
+  const d = row.querySelector(".detail");
+  const failed = it.status !== "ok";
+  const canAudio = !!it.has_audio;
+  const canCopy = it.status === "ok" && it.text && it.text.trim().length > 0;
+
+  let html =
+    '<div class="bubble ' + (failed ? "failed" : "") + '">' +
+      '<span class="bubble-text"></span>' +
+      (canCopy ? '<button class="btn ghost" style="position:absolute;top:8px;right:8px;padding:5px" data-copy title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>' : '') +
+    '</div>';
+
+  if (canAudio) {
+    html +=
+      '<div class="player">' +
+        '<button class="iconbtn play" data-play aria-label="Play">' + PLAY_SVG + '</button>' +
+        '<div class="wave"><canvas></canvas></div>' +
+        '<div class="time tnum" data-cur>0:00</div><div class="time tnum" data-tot style="color:var(--faint)">' + fmt(it.dur) + '</div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<span class="eyebrow" style="letter-spacing:.06em">Retry as</span>' +
+        '<div class="seg" data-seg><button class="on" data-l="">Auto</button><button data-l="en">EN</button><button data-l="tr">TR</button></div>' +
+        '<button class="btn primary" data-retry><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>Regenerate</button>' +
+        '<div class="spacer"></div>' +
+        '<button class="btn" data-download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v3h16v-3"/></svg>Download</button>' +
+      '</div>';
+  } else {
+    html += '<div class="no-audio">No voice clip stored for this dictation.</div>';
+  }
+  d.innerHTML = html;
+  d.querySelector(".bubble-text").textContent = it.text || "";
+
+  // copy -> server-side pyperclip (reliable in WKWebView)
+  const copyBtn = d.querySelector("[data-copy]");
+  if (copyBtn) copyBtn.addEventListener("click", async (ev) => {
+    ev.stopPropagation();
+    try { await postJSON("/api/copy", { id }); toast("Copied to clipboard"); }
+    catch (e) { toast("Couldn't copy"); }
+  });
+
+  if (canAudio) {
+    // language selector
+    d.querySelector("[data-seg]").addEventListener("click", e => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      d.querySelectorAll("[data-seg] button").forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+    });
+    // regenerate
+    d.querySelector("[data-retry]").addEventListener("click", () => regenerate(row, it, d));
+    // download
+    d.querySelector("[data-download]").addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = mediaURL("/api/download", id);
+      a.download = "dictate-" + id + ".wav";
+      document.body.appendChild(a); a.click(); a.remove();
+      toast("Saved dictate-" + id + ".wav");
+    });
+    // player + waveform
+    setupPlayer(row, it, d);
+  }
+}
+
+async function regenerate(row, it, d) {
+  const id = it.id;
+  const lang = (d.querySelector("[data-seg] button.on") || {}).dataset ? d.querySelector("[data-seg] button.on").dataset.l : "";
+  const btn = d.querySelector("[data-retry]");
+  const langLabel = lang === "en" ? "EN" : lang === "tr" ? "TR" : "Auto";
+  btn.disabled = true;
+  toast("Re-transcribing from voice · " + langLabel + " …");
+  try {
+    const res = await postJSON("/api/regenerate", { id, lang });
+    const newText = (res && typeof res.text === "string") ? res.text : "";
+    it.text = newText;
+    if (newText.trim()) it.status = "ok";
+    // update bubble + row text in place
+    const bt = d.querySelector(".bubble-text"); if (bt) bt.textContent = newText;
+    const bubble = d.querySelector(".bubble"); if (bubble && newText.trim()) bubble.classList.remove("failed");
+    const rt = row.querySelector(".row-text");
+    if (rt) { rt.textContent = newText; if (newText.trim()) rt.classList.remove("failed", "empty"); }
+    toast("Regenerated");
+  } catch (e) {
+    toast("Regenerate failed");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------------- waveform + audio ---------------- */
+function drawWave(cv, id, peaks, progress) {
+  if (!cv || !cv.clientWidth) return;
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  const n = peaks.length, gap = 2, bw = (w - (n - 1) * gap) / n;
+  for (let i = 0; i < n; i++) {
+    const bh = Math.max(2, peaks[i] * h * 0.9);
+    const x = i * (bw + gap), y = (h - bh) / 2;
+    const played = (i / n) <= progress;
+    g.fillStyle = played ? "#b6f24a" : "#3a4033";
+    const r = Math.min(bw / 2, 2);
+    g.beginPath(); g.roundRect(x, y, bw, bh, r); g.fill();
+  }
+}
+
+function setupPlayer(row, it, d) {
+  const id = it.id;
+  const cv = d.querySelector("canvas");
+  const btn = d.querySelector("[data-play]");
+  const cur = d.querySelector("[data-cur]");
+  const tot = d.querySelector("[data-tot]");
+  const wave = d.querySelector(".wave");
+
+  const p = { cv, peaks: flatPeaks(64), audio: null };
+  players[id] = p;
+  drawWave(cv, id, p.peaks, 0);
+
+  const audio = new Audio();
+  audio.preload = "metadata";
+  audio.src = mediaURL("/api/audio", id);   // <audio> hits /api/audio (Range-served) so it can seek
+  p.audio = audio;
+
+  const progress = () => {
+    const dur = (audio.duration && isFinite(audio.duration)) ? audio.duration : (it.dur || 0);
+    return dur ? Math.min(1, audio.currentTime / dur) : 0;
+  };
+  audio.addEventListener("loadedmetadata", () => {
+    if (isFinite(audio.duration) && audio.duration > 0) tot.textContent = fmt(audio.duration);
+  });
+  audio.addEventListener("timeupdate", () => {
+    drawWave(cv, id, p.peaks, progress());
+    cur.textContent = fmt(audio.currentTime);
+  });
+  audio.addEventListener("play", () => { btn.innerHTML = PAUSE_SVG; });
+  audio.addEventListener("pause", () => { btn.innerHTML = PLAY_SVG; });
+  audio.addEventListener("ended", () => {
+    btn.innerHTML = PLAY_SVG;
+    drawWave(cv, id, p.peaks, 0);
+    cur.textContent = "0:00";
+  });
+  btn.addEventListener("click", () => {
+    if (audio.paused) audio.play().catch(() => toast("Couldn't play clip"));
+    else audio.pause();
+  });
+  // click-to-seek on the waveform
+  wave.addEventListener("click", e => {
+    const dur = (audio.duration && isFinite(audio.duration)) ? audio.duration : 0;
+    if (!dur) return;
+    const rect = wave.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = frac * dur;
+    drawWave(cv, id, p.peaks, frac);
+    cur.textContent = fmt(audio.currentTime);
+  });
+
+  loadPeaks(id, mediaURL("/api/audio", id));
+}
+
+async function loadPeaks(id, src) {
+  try {
+    const r = await api(src);
+    if (!r.ok) return;
+    const buf = await r.arrayBuffer();
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const ab = await ctx.decodeAudioData(buf);
+    const peaks = computePeaks(ab, 64);
+    if (ctx.close) ctx.close();
+    const p = players[id];
+    if (p) { p.peaks = peaks; drawWave(p.cv, id, peaks, p.audio ? Math.min(1, (p.audio.currentTime || 0) / (p.audio.duration || 1)) : 0); }
+  } catch (e) { /* keep flat placeholder */ }
+}
+
+function computePeaks(audioBuffer, n) {
+  const ch = audioBuffer.getChannelData(0);
+  const block = Math.max(1, Math.floor(ch.length / n));
+  const peaks = [];
+  let max = 1e-4;
+  for (let i = 0; i < n; i++) {
+    const start = i * block, end = Math.min(ch.length, start + block);
+    let sum = 0, cnt = 0;
+    for (let j = start; j < end; j++) { const v = ch[j]; sum += v * v; cnt++; }
+    const rms = Math.sqrt(sum / (cnt || 1));
+    peaks.push(rms);
+    if (rms > max) max = rms;
+  }
+  return peaks.map(v => Math.max(0.06, Math.min(1, v / max)));
+}
+
+function closePlayer(id) {
+  const p = players[id];
+  if (p && p.audio) { try { p.audio.pause(); p.audio.src = ""; } catch (e) {} }
+  delete players[id];
+}
+function closeAllPlayers() { Object.keys(players).forEach(closePlayer); }
+
+/* ---------------- settings ---------------- */
+function applySettings(s) {
+  s = s || {};
+  // mode: "batch" | "live"
+  const mode = s.mode === "live" ? "live" : "batch";
+  document.querySelectorAll("#set-mode button").forEach(b => b.classList.toggle("on", b.dataset.v === mode));
+  // language: null | "en" | "tr"
+  const lang = s.language || "";
+  document.querySelectorAll("#set-lang button").forEach(b => b.classList.toggle("on", b.dataset.v === lang));
+  // swallow_ptt: bool
+  document.getElementById("set-swallow").classList.toggle("on", !!s.swallow_ptt);
+}
+
+async function setSetting(key, value) {
+  try { await postJSON("/api/setting", { key, value }); toast("Saved"); }
+  catch (e) { toast("Couldn't save setting"); }
+}
+
+function wireSettings() {
+  document.getElementById("set-mode").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll("#set-mode button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    setSetting("mode", b.dataset.v);
+  });
+  document.getElementById("set-lang").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll("#set-lang button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    setSetting("language", b.dataset.v === "" ? null : b.dataset.v);
+  });
+  const sw = document.getElementById("set-swallow");
+  sw.addEventListener("click", () => {
+    const on = !sw.classList.contains("on");
+    sw.classList.toggle("on", on);
+    setSetting("swallow_ptt", on);
+  });
+}
+
+/* ---------------- nav ---------------- */
+function showView(view) {
+  document.querySelectorAll(".nav a").forEach(a => a.classList.toggle("active", a.dataset.view === view));
+  document.getElementById("view-home").hidden = (view !== "home");
+  document.getElementById("view-settings").hidden = (view !== "settings");
+}
+function wireNav() {
+  document.querySelectorAll(".nav a").forEach(a => {
+    a.addEventListener("click", e => { e.preventDefault(); showView(a.dataset.view); });
+  });
+}
+
+/* ---------------- boot ---------------- */
+let _dataVersion = null;
+
+async function load() {
+  try {
+    const data = await apiJSON("/api/data");
+    _dataVersion = data.version;
+    renderStats(data.stats);
+    applySettings(data.settings);
+    renderList(data.groups);
+  } catch (e) {
+    list.innerHTML =
+      '<div class="empty">' +
+        '<div class="empty-mark">' + ICONS.mic + '</div>' +
+        '<b>Couldn\'t load your dictations</b>' +
+        '<p>The dashboard service didn\'t respond. Try reopening this window from the menu bar.</p>' +
+      '</div>';
+  }
+}
+
+/* Live refresh: poll the store's change token and re-render when a new
+   dictation (or a regenerate) lands — deferred while a clip is playing so we
+   never interrupt playback, and preserving whichever row is open. */
+function anyPlaying() {
+  for (const id in players) {
+    const p = players[id];
+    if (p && p.audio && !p.audio.paused && !p.audio.ended) return true;
+  }
+  return false;
+}
+function openRowId() {
+  const r = document.querySelector(".row.open");
+  return r ? r.dataset.id : null;
+}
+async function refresh() {
+  const openId = openRowId();
+  try {
+    const data = await apiJSON("/api/data");
+    _dataVersion = data.version;
+    renderStats(data.stats);
+    renderList(data.groups, openId);  // null -> opens the newest (the new line)
+  } catch (e) { /* keep the last good view; retry next tick */ }
+}
+async function pollVersion() {
+  try {
+    const r = await apiJSON("/api/version");
+    if (_dataVersion === null) { _dataVersion = r.version; return; }
+    if (r.version !== _dataVersion && !anyPlaying()) await refresh();
+  } catch (e) { /* transient; try again next tick */ }
+}
+setInterval(pollVersion, 1500);
+
+wireNav();
+wireSettings();
+load();
+</script>
+</body>
+</html>

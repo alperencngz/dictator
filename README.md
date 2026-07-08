@@ -29,11 +29,13 @@ uv pip install -e .
 
 System Settings → Privacy & Security, grant your **terminal app** (or whatever runs `dictate`):
 
-- **Microphone** — to record you
-- **Accessibility** — to simulate ⌘V / typing into other apps
-- **Input Monitoring** — for the global push-to-talk hotkey
+- **Microphone** — to record you.
+- **Accessibility** — this is the one that matters. It gates **both** the global push-to-talk hotkey (pynput installs a CGEventTap) **and** simulating ⌘V / typing into other apps. If the ready chime plays but holding the key does nothing, this toggle is off.
+- **Input Monitoring** — usually *not* required for the hotkey. Grant it only if macOS also lists the app here and keystrokes still don't arrive after Accessibility is on.
 
-Run `dictate doctor` for a checklist.
+> **Dictate.app has its own permission identity.** macOS attributes Accessibility / Microphone grants to the specific app bundle that asks. Granting your terminal does **not** grant `Dictate.app` — when you run the bundled app, grant it separately (Settings → Privacy & Security → Accessibility → **+** → select `Dictate.app`). Grants do not transfer between the two.
+
+Run `dictate doctor` — it probes both permissions live and tells you exactly what's missing.
 
 ## Usage
 
