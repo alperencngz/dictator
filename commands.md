@@ -4,6 +4,11 @@ Copy-paste reference for running and maintaining the app.
 
 ## ▶️ Run it (the one you'll use most)
 
+**As a Mac app (recommended) — no terminal:** ⌘Space → type **"Dictate"** → Enter.
+It auto-starts at login too (LaunchAgent, see below), so most days you never touch this.
+
+Or from a terminal, for development/debugging:
+
 ```bash
 cd ~/Desktop/dictate && uv run dictate run
 ```
@@ -43,12 +48,29 @@ git push
 
 Repo: https://github.com/alperencngz/dictator
 
-## 📦 Optional — build the standalone Dictate.app
+## 📦 Building / installing Dictate.app
 
-Only needed if you want a double-clickable app (its own permission identity). Rebuild only after changing `setup_app.py` / the plist — normal source edits go live on relaunch.
+Rebuild only after changing `setup_app.py`, the icon, or the plist — normal source edits
+(anything in `dictate/`, `mac/dictate_launcher.py`) go live on relaunch, no rebuild.
 
 ```bash
 cd ~/Desktop/dictate
 ./mac/build_app.sh
-open dist/Dictate.app
+rm -rf /Applications/Dictate.app && cp -R dist/Dictate.app /Applications/
+```
+
+⚠️ **Rebuilding resets its Accessibility grant** (re-signing changes the bundle's
+identity). After a rebuild: System Settings → Privacy & Security → Accessibility →
+remove the old "Dictate" row → **+** → re-add `/Applications/Dictate.app` → toggle on.
+If it still fails after that, run `tccutil reset Accessibility ai.turkiye.dictate` first
+(clears a stale duplicate entry), then re-add.
+
+## 🚀 Auto-start at login
+
+A LaunchAgent (`mac/ai.turkiye.dictate.plist`, symlinked into `~/Library/LaunchAgents/`)
+runs `open -a Dictate.app` — the same path as a Spotlight launch — on every login.
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictate.plist   # (re)load
+launchctl bootout gui/$(id -u)/ai.turkiye.dictate                                  # disable
 ```

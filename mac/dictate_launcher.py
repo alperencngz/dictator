@@ -32,7 +32,12 @@ def main() -> None:
     # repo root (terminal runs) or Contents/Resources (Finder launches).
     os.chdir(log_dir)
     # Line-buffered append so `tail -f ~/.dictate/dictate.log` shows live output.
-    log = open(log_dir / "dictate.log", "a", buffering=1)
+    # encoding="utf-8" is required: launched via LaunchServices (Spotlight/Dock/
+    # login item) the process has no inherited shell locale, so Python's default
+    # text encoding falls back to ASCII and any non-ASCII print() (the "»" marker,
+    # Turkish transcript text, emoji) raises UnicodeEncodeError mid-_finish(),
+    # killing that thread before it resets state or records history.
+    log = open(log_dir / "dictate.log", "a", buffering=1, encoding="utf-8")
     sys.stdout = log
     sys.stderr = log
     print(f"\n[dictate] === launch {datetime.now().isoformat(timespec='seconds')} ===")

@@ -11,6 +11,44 @@ diffs minimal and phase-scoped; commit once per phase with a message naming the 
 
 ---
 
+## 0. Status update — 2026-07-28
+
+Everything below this line is the original 2026-07-08 diagnosis/plan — kept intact as the
+historical record. Since then, **Phase 4 and Phase 6 are done and user-confirmed**:
+
+- **Dictate.app runs as a real Mac app**, launched from Spotlight/Finder like any other
+  app (no terminal). Verified end-to-end: launches clean, hotkey tap attaches, dictation
+  lands text, dashboard shows the entry.
+- **Custom icon** (`mac/Dictate.icns`, lime-on-near-black mic glyph) wired into
+  `setup_app.py` via `iconfile`.
+- **Autostart at login** — Phase 6 done, per spec, via `mac/ai.turkiye.dictate.plist`
+  (symlinked into `~/Library/LaunchAgents/`), targeting `/Applications/Dictate.app`
+  instead of `dist/`.
+- **New landmine discovered and fixed** (add to §6): rebuilding the `.app` (for the icon)
+  **reset its Accessibility TCC grant** — re-signing changes the ad-hoc identity macOS
+  keys the permission to. Confirmed by reproduction: `CGEventTapCreate` returned `None`
+  (`hotkeys.py` RuntimeError) immediately after a rebuild that worked fine before it.
+  Fixed operationally by re-granting (a stale duplicate list entry needed
+  `tccutil reset Accessibility ai.turkiye.dictate` first). **Do not rebuild the .app
+  casually** — only for icon/plist/setup_app.py changes, never for routine source edits
+  (alias mode already picks those up live).
+- **New bug found and fixed** (not anticipated by RC1-RC6): `mac/dictate_launcher.py`
+  opened the redirected log file (`log = open(..., "a", buffering=1)`) without
+  `encoding="utf-8"`. Launched from a shell, this inherits the shell's UTF-8 locale and
+  is invisible. Launched via LaunchServices (Spotlight/login item/double-click) — i.e.
+  exactly the new supported path — there is no shell locale, Python falls back to ASCII,
+  and `engine.py`'s `print(f"[dictate] » {text}")` (the `»` character, also any Turkish
+  transcript text printed anywhere) throws `UnicodeEncodeError`. That exception killed
+  the `_finish` thread **after** the text was already pasted but **before** state reset
+  and `history.add(...)` — symptom: UI stuck on the recording indicator, and the
+  dictation never appears in the dashboard. Fixed by adding `encoding="utf-8"` to the
+  `open()` call. Source-only fix, live on relaunch, no rebuild.
+
+Phase 5 (streaming mode) was **not** touched this pass — `mode: batch` remains the
+default and is what was tested above.
+
+---
+
 ## 1. Mission
 
 The user wants exactly two things working:
@@ -294,13 +332,14 @@ again (injection), or the focused app blocks synthetic ⌘V — try `insert_meth
    reaps the worker children (`pgrep -f RealtimeSTT` / stray `.venv/bin/python` after quit
    ⇒ fail).
 
-### Phase 6 — Autostart (optional; only after §7 is green)
+### Phase 6 — Autostart — **DONE 2026-07-28**
 
-`~/Library/LaunchAgents/ai.turkiye.dictate.plist`: `ProgramArguments = [open, -a,
-<abs path to dist/Dictate.app>]` (via `open` so LaunchServices owns the lifecycle),
-`RunAtLoad = true`, no `KeepAlive` (menu-bar Quit must stay authoritative).
-`launchctl bootstrap gui/$(id -u) <plist>` to load. **[USER] Gate:** log out/in (or
-reboot) → 🎙️ appears; dictation works without touching a terminal.
+`mac/ai.turkiye.dictate.plist` (checked into the repo, symlinked from
+`~/Library/LaunchAgents/`): `ProgramArguments = [/usr/bin/open, -a,
+/Applications/Dictate.app]` (targets the installed app, not `dist/` — via `open` so
+LaunchServices owns the lifecycle), `RunAtLoad = true`, no `KeepAlive` (menu-bar Quit
+stays authoritative). Loaded with `launchctl bootstrap gui/$(id -u) <plist>`.
+**[USER] Gate — confirmed:** app launches without a terminal; dictation works.
 
 ## 6. Landmines — things that look wrong but are deliberate (do not "fix")
 
@@ -326,6 +365,15 @@ reboot) → 🎙️ appears; dictation works without touching a terminal.
 8. **`mac/dictate_launcher.py` keeps all side effects inside `main()`** because
    multiprocessing children re-import the module as `__mp_main__`. Preserve that
    property when editing (the Phase 2 `del sys.frozen` goes inside `main()`).
+9. **Rebuilding `Dictate.app` resets its Accessibility grant** — re-signing (ad-hoc)
+   changes the identity macOS ties the TCC permission to. Only rebuild for
+   `setup_app.py` / icon / Info.plist changes; routine `dictate/` source edits are live
+   on relaunch via alias mode and need no rebuild (and no re-grant).
+10. **`mac/dictate_launcher.py`'s redirected log must stay `encoding="utf-8"`** — launched
+    via LaunchServices there is no shell locale, so a bare `open(path, "a")` defaults to
+    ASCII and any non-ASCII `print()` (the `»` marker, Turkish transcript text) raises
+    `UnicodeEncodeError` mid-`_finish()`, silently dropping the state reset and the
+    history write. Do not remove the explicit encoding.
 
 ## 7. Acceptance checklist (the reviewing agent controls against this)
 
@@ -335,11 +383,14 @@ reboot) → 🎙️ appears; dictation works without touching a terminal.
       `[dictate] ready.` in `~/.dictate/dictate.log`; venv-python workers visible.
 - [ ] P3: `doctor` performs real checks (AXIsProcessTrusted, mic RMS) with accurate text;
       README permissions section corrected.
-- [ ] P4a/P4b **[USER-confirmed]**: batch dictation works from Terminal *and* from
-      Dictate.app, EN + TR, text lands in TextEdit.
+- [x] P4a/P4b **[USER-confirmed 2026-07-28]**: dictation works from Dictate.app launched
+      via Spotlight/LaunchServices (not just Terminal), EN, text lands correctly and the
+      dashboard shows the entry. (Turkish not re-verified this pass; was verified in the
+      v0.1 era per §2.)
 - [ ] P5 **[USER-confirmed]**: streaming shows live partials in the HUD and pastes the
       final text once on release; `final audio length` > 0 in realtimesst.log; live
-      typing enabled **only** if the modifier experiment passed.
+      typing enabled **only** if the modifier experiment passed. — not attempted this
+      pass; `mode: batch` remains default.
 - [ ] `realtimesst.log` gitignored and out of the repo root; RealtimeSTT logs land in
       `~/.dictate/`.
 - [ ] Batch mode untouched and still working (regression-test P4a after Phase 5).
@@ -347,3 +398,5 @@ reboot) → 🎙️ appears; dictation works without touching a terminal.
 - [ ] Handoff message includes: `git log --oneline -8`, tail of `~/.dictate/dictate.log`
       from a successful .app session, and the user's literal confirmations for the
       [USER] gates.
+- [x] Phase 6 **[USER-confirmed 2026-07-28]**: `mac/ai.turkiye.dictate.plist` installed
+      and bootstrapped; targets `/Applications/Dictate.app` (not `dist/`).

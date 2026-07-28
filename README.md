@@ -25,6 +25,36 @@ uv venv --python 3.12
 uv pip install -e .
 ```
 
+## Run it as a Mac app (recommended)
+
+`Dictate.app` is a real macOS app — launch it from Spotlight, Finder, or your Dock, no
+terminal needed. It's a py2app **alias-mode** bundle: it runs this repo's `dictate/`
+source and `.venv` in place, so it only works on this machine, but source edits go live
+on relaunch with **no rebuild**.
+
+```bash
+./mac/build_app.sh
+cp -R dist/Dictate.app /Applications/
+```
+
+Then **⌘Space → "Dictate" → Enter**. It runs headless in the menu bar (🎙️, top-right) —
+no Dock icon, no window, by design (`LSUIElement`).
+
+**Auto-start at login** (so it's already running after every reboot, no manual launch):
+
+```bash
+cp mac/ai.turkiye.dictate.plist ~/Library/LaunchAgents/   # or symlink it
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictate.plist
+```
+
+> **Rebuilding resets its Accessibility grant.** `build_app.sh` re-signs the bundle
+> (ad-hoc signature), and macOS ties the Accessibility permission to that signature — so
+> after every rebuild you must re-grant it: System Settings → Privacy & Security →
+> Accessibility → remove the old "Dictate" entry if present → **+** → re-add
+> `/Applications/Dictate.app` → toggle on. If it still won't take, run
+> `tccutil reset Accessibility ai.turkiye.dictate` first to clear a stale entry, then
+> re-add. Only rebuilding needs this — plain source edits don't.
+
 ## macOS permissions (one-time)
 
 System Settings → Privacy & Security, grant your **terminal app** (or whatever runs `dictate`):

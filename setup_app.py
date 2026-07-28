@@ -29,6 +29,7 @@ APP = [os.path.join(_HERE, "mac", "dictate_launcher.py")]
 
 OPTIONS = {
     "argv_emulation": False,  # Carbon-based; broken on Apple Silicon. Leave off.
+    "iconfile": os.path.join(_HERE, "mac", "Dictate.icns"),
     "plist": {
         "CFBundleName": "Dictate",
         "CFBundleDisplayName": "Dictate",
