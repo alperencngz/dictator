@@ -208,12 +208,19 @@ class Engine:
         if was_live and self._preview_stop is not None:
             self._preview_stop.set()
         self._preview_thread = None
-        audio = self._recorder.stop()
         feedback.stop(self.cfg.get("sound_feedback", True))
         self._set_state("transcribing")
-        # Transcribe off the hotkey thread so key events keep flowing.
+        # Stopping the PortAudio stream (done inside _finish, not here) calls
+        # into CoreAudio's HAL and can block for real: observed live a deadlock
+        # where AudioOutputUnitStop on this thread and the stream's own IO
+        # thread both wait on the same HAL mutex. This function runs on the
+        # CGEventTap callback on the MAIN thread — blocking here freezes the
+        # entire app (menu bar, dashboard, cursor) until force-quit, since
+        # nothing can service the run loop. Keep it to state flips + a thread
+        # spawn only; the (rare) hang then strands just that one utterance's
+        # background thread instead of the whole app.
         threading.Thread(target=self._finish,
-                         args=(audio, gen, was_live), daemon=True).start()
+                         args=(gen, was_live), daemon=True).start()
 
     def toggle(self) -> None:
         if self._recording:
@@ -276,8 +283,18 @@ class Engine:
             except Exception:
                 pass
 
-    def _finish(self, audio, gen: int, live: bool) -> None:
+    def _finish(self, gen: int, live: bool) -> None:
         from . import inject
+        try:
+            audio = self._recorder.stop()
+        except Exception as e:
+            print(f"[dictate] stopping capture failed: {e}")
+            if live:
+                self._erase_live()
+            self.on_text("")  # clear the HUD's last partial
+            feedback.error(self.cfg.get("sound_feedback", True))
+            self._set_state("idle")
+            return
         sample_rate = self.cfg.get("sample_rate", 16000)
         duration_s = (len(audio) / sample_rate) if audio is not None else 0.0
         try:
