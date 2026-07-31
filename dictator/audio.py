@@ -4,6 +4,12 @@ Unlike listener's Recorder (which streams to a WAV file for long
 meetings), this captures into an in-memory buffer and hands back a
 float32 numpy array at 16 kHz mono — exactly what faster-whisper wants,
 with no temp-file round trip.
+
+Closing a PortAudio stream calls into CoreAudio's HAL and can deadlock for
+real (see _close_async), so capture is structured so that NOTHING the
+dictation pipeline needs is behind that call: each utterance gets its own
+_Session holding the buffer, and stop() reads the audio out of the session
+before handing the stream off to a background closer.
 """
 
 from __future__ import annotations
@@ -28,6 +34,80 @@ def list_input_devices() -> list[dict]:
     return result
 
 
+def _close_async(stream) -> None:
+    """Stop+close a PortAudio stream on a throwaway thread.
+
+    stream.stop() enters CoreAudio's HAL and can block forever: observed live
+    (twice) a deadlock where the thread calling AudioOutputUnitStop waits on a
+    HAL mutex held by the stream's own IO thread, which is itself blocked
+    inside PortAudio's startStopCallback -> AudioUnitGetProperty. It is a
+    CoreAudio/PortAudio bug, not something we can lock our way out of — so the
+    only safe move is to ensure a hang costs us nothing but one daemon thread
+    and one leaked stream.
+
+    Nothing waits on this thread and no caller-visible lock is held across it,
+    so a wedged close can no longer stall the next utterance. The leaked
+    stream keeps writing into its OWN (already-detached) session buffer, so it
+    cannot corrupt later captures either.
+    """
+    if stream is None:
+        return
+
+    def _close():
+        try:
+            stream.stop()
+            stream.close()
+        except Exception as e:
+            print(f"[dictator] closing capture stream failed: {e}")
+
+    t = threading.Thread(target=_close, daemon=True, name="audio-close")
+    t.start()
+    # Purely diagnostic: surface the hang in the log instead of leaving a
+    # silent leak. We do NOT block the caller on the outcome.
+    def _watch():
+        t.join(5.0)
+        if t.is_alive():
+            print("[dictator] capture stream close is wedged in CoreAudio; "
+                  "abandoning it (next utterance opens a fresh stream)")
+
+    threading.Thread(target=_watch, daemon=True, name="audio-close-watch").start()
+
+
+class _Session:
+    """One capture session: the buffer its stream's callback fills.
+
+    Owning the buffer per-session (rather than per-recorder) is what makes a
+    leaked stream harmless — its callback keeps appending to a session nobody
+    reads anymore, instead of polluting the next utterance's audio.
+    """
+
+    def __init__(self, max_frames: int):
+        self.chunks: list[np.ndarray] = []
+        self.lock = threading.Lock()
+        self.frames = 0
+        self.max_frames = max_frames
+        self.stream: sd.InputStream | None = None
+
+    def callback(self, indata, frames, time_info, status):  # noqa: ARG002
+        if self.frames >= self.max_frames:
+            return
+        chunk = indata.copy()
+        with self.lock:
+            self.chunks.append(chunk)
+            self.frames += frames
+
+    def concat(self) -> np.ndarray:
+        """Concatenate accumulated chunks into a fresh mono float32 array."""
+        with self.lock:
+            chunks = list(self.chunks)  # shallow copy of the list of arrays
+        if not chunks:
+            return np.zeros(0, dtype=np.float32)
+        audio = np.concatenate(chunks, axis=0)
+        if audio.ndim > 1:
+            audio = audio[:, 0]
+        return audio.astype(np.float32)
+
+
 class BufferRecorder:
     """Records mic audio into memory between start() and stop().
 
@@ -43,46 +123,27 @@ class BufferRecorder:
         self.device = device
         self.sample_rate = sample_rate
         self.max_seconds = max_seconds
-        # Captured chunks accumulate in a list guarded by a lock (rather than a
-        # drain-once queue) so snapshot() can copy them mid-capture without
-        # disturbing the eventual stop() concatenation.
-        self._chunks: list[np.ndarray] = []
-        self._buf_lock = threading.Lock()
-        self._stream: sd.InputStream | None = None
-        self._frames = 0
         self._max_frames = sample_rate * max_seconds
-
-    def _callback(self, indata, frames, time_info, status):  # noqa: ARG002
-        if self._frames >= self._max_frames:
-            return
-        chunk = indata.copy()
-        with self._buf_lock:
-            self._chunks.append(chunk)
-            self._frames += frames
-
-    def _concat(self) -> np.ndarray:
-        """Concatenate the accumulated chunks into a fresh mono float32 array."""
-        with self._buf_lock:
-            chunks = list(self._chunks)  # shallow copy of the list of arrays
-        if not chunks:
-            return np.zeros(0, dtype=np.float32)
-        audio = np.concatenate(chunks, axis=0)
-        if audio.ndim > 1:
-            audio = audio[:, 0]
-        return audio.astype(np.float32)
+        self._session: _Session | None = None
 
     def start(self) -> None:
-        with self._buf_lock:
-            self._chunks = []
-            self._frames = 0
-        self._stream = sd.InputStream(
+        # A previous session still attached means stop() never ran (e.g. a
+        # start/start race); detach and close it rather than orphaning it.
+        stale, self._session = self._session, None
+        if stale is not None:
+            _close_async(stale.stream)
+
+        session = _Session(self._max_frames)
+        stream = sd.InputStream(
             device=self.device,
             channels=1,
             samplerate=self.sample_rate,
             dtype="float32",
-            callback=self._callback,
+            callback=session.callback,
         )
-        self._stream.start()
+        stream.start()
+        session.stream = stream
+        self._session = session
 
     def snapshot(self) -> np.ndarray:
         """Return a COPY of the audio captured so far, without stopping.
@@ -90,16 +151,26 @@ class BufferRecorder:
         Thread-safe against the audio callback; used by live mode to run
         partial transcriptions while capture continues.
         """
-        return self._concat()
+        session = self._session
+        if session is None:
+            return np.zeros(0, dtype=np.float32)
+        return session.concat()
 
     def stop(self) -> np.ndarray:
-        """Stop and return the captured mono float32 audio."""
-        if self._stream is not None:
-            self._stream.stop()
-            self._stream.close()
-            self._stream = None
-        return self._concat()
+        """Return the captured mono float32 audio; close the stream in the background.
+
+        Order matters: the audio is read out of the session FIRST, so the
+        transcription pipeline never waits on CoreAudio. Closing the stream is
+        pure cleanup and is deliberately fire-and-forget (see _close_async).
+        """
+        session, self._session = self._session, None
+        if session is None:
+            return np.zeros(0, dtype=np.float32)
+        audio = session.concat()
+        _close_async(session.stream)
+        return audio
 
     @property
     def seconds(self) -> float:
-        return self._frames / self.sample_rate
+        session = self._session
+        return (session.frames / self.sample_rate) if session is not None else 0.0

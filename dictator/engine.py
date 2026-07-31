@@ -19,6 +19,7 @@ identically):
 
 from __future__ import annotations
 
+import contextlib
 import threading
 from typing import Callable
 
@@ -84,13 +85,20 @@ class Engine:
         )
         self._lock = threading.Lock()
         self._recording = False
-        # Guards the actual recorder.start()/recorder.stop() CoreAudio calls.
-        # Both now run on background threads (see start()/stop()'s comments), so
-        # a fast tap-tap can otherwise race a start-thread and a stop-thread
-        # against each other on the same PortAudio stream — something the old
-        # code got for free by running both synchronously on the single-
-        # threaded hotkey callback. This restores that serialization.
+        # Guards the actual recorder.start()/recorder.stop() calls. Both run on
+        # background threads (see start()/stop()'s comments), so a fast tap-tap
+        # can otherwise race a start-thread and a stop-thread against each other
+        # on the same PortAudio stream — something the old code got for free by
+        # running both synchronously on the single-threaded hotkey callback.
+        # This restores that serialization.
+        #
+        # ALWAYS acquire it with a timeout (_audio_io, below). Opening a stream
+        # still enters CoreAudio's HAL, which has deadlocked on us before; an
+        # untimed acquire turns one such hang into a permanently dead app, as
+        # every later utterance queues behind the stuck holder forever. That is
+        # exactly the failure this timeout exists to prevent.
         self._audio_io_lock = threading.Lock()
+        self._audio_io_timeout = 10.0
 
         # --- live mode ---
         # Runtime-settable; phase-2 UI flips this via set_live(). Legacy config
@@ -169,6 +177,21 @@ class Engine:
                 self._fast_loading = False
 
     # --- capture lifecycle ---
+    @contextlib.contextmanager
+    def _audio_io(self):
+        """Hold the audio-IO lock, or raise TimeoutError rather than wait forever.
+
+        A stuck CoreAudio call must degrade to "this one utterance failed", never
+        to "the app records nothing until relaunch".
+        """
+        if not self._audio_io_lock.acquire(timeout=self._audio_io_timeout):
+            raise TimeoutError(
+                "audio device busy (a previous capture is wedged in CoreAudio)")
+        try:
+            yield
+        finally:
+            self._audio_io_lock.release()
+
     def start(self) -> None:
         with self._lock:
             if self._recording:
@@ -189,7 +212,7 @@ class Engine:
 
     def _start_capture(self, gen: int, live: bool) -> None:
         try:
-            with self._audio_io_lock:
+            with self._audio_io():
                 self._recorder.start()
         except Exception as e:
             with self._lock:
@@ -206,7 +229,7 @@ class Engine:
             # stop() (or a newer start()) already ran while we were opening the
             # stream — close it out quietly instead of getting stuck "recording".
             try:
-                with self._audio_io_lock:
+                with self._audio_io():
                     self._recorder.stop()
             except Exception:
                 pass
@@ -317,7 +340,7 @@ class Engine:
     def _finish(self, gen: int, live: bool) -> None:
         from . import inject
         try:
-            with self._audio_io_lock:
+            with self._audio_io():
                 audio = self._recorder.stop()
         except Exception as e:
             print(f"[dictator] stopping capture failed: {e}")
