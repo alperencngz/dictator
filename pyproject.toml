@@ -15,6 +15,11 @@ dependencies = [
     "click>=8.1",
     "rumps>=0.4.0 ; sys_platform == 'darwin'",
     "pyobjc-framework-WebKit>=10.0 ; sys_platform == 'darwin'",
+    # Capture backend that avoids PortAudio's stop-path deadlock (see audio.py).
+    "pyobjc-framework-AVFoundation>=10.0 ; sys_platform == 'darwin'",
+    # Rate-converts the hardware capture rate down to Whisper's 16 kHz. Was
+    # only present transitively via realtimestt, which is now dormant.
+    "scipy>=1.11",
     "realtimestt>=1.0.2",
     "silero-vad>=6.2.1",
 ]

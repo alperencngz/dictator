@@ -55,6 +55,10 @@ DEFAULTS: dict[str, Any] = {
     "input_device": None,         # None = system default mic; or device index (see `dictator devices`)
     "sample_rate": 16000,         # Whisper wants 16k mono
     "max_seconds": 120,           # hard cap on a single utterance
+    # Capture backend: "auto" (AVFoundation on macOS, else PortAudio),
+    # "avfoundation", or "portaudio". AVFoundation avoids PortAudio's
+    # stop-path deadlock; setting input_device forces PortAudio regardless.
+    "audio_backend": "auto",
 
     # --- Hotkeys (pynput key names) ---
     # Push-to-talk: hold to record, release to transcribe + insert.

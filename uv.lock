@@ -207,11 +207,13 @@ dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pynput" },
+    { name = "pyobjc-framework-avfoundation", marker = "sys_platform == 'darwin'" },
     { name = "pyobjc-framework-webkit", marker = "sys_platform == 'darwin'" },
     { name = "pyperclip" },
     { name = "pyyaml" },
     { name = "realtimestt" },
     { name = "rumps", marker = "sys_platform == 'darwin'" },
+    { name = "scipy" },
     { name = "silero-vad" },
     { name = "sounddevice" },
     { name = "soundfile" },
@@ -223,11 +225,13 @@ requires-dist = [
     { name = "faster-whisper", specifier = ">=1.0.3" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pynput", specifier = ">=1.7.7" },
+    { name = "pyobjc-framework-avfoundation", marker = "sys_platform == 'darwin'", specifier = ">=10.0" },
     { name = "pyobjc-framework-webkit", marker = "sys_platform == 'darwin'", specifier = ">=10.0" },
     { name = "pyperclip", specifier = ">=1.8.2" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "realtimestt", specifier = ">=1.0.2" },
     { name = "rumps", marker = "sys_platform == 'darwin'", specifier = ">=0.4.0" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "silero-vad", specifier = ">=6.2.1" },
     { name = "sounddevice", specifier = ">=0.4.6" },
     { name = "soundfile", specifier = ">=0.12.1" },
@@ -805,6 +809,23 @@ wheels = [
 ]
 
 [[package]]
+name = "pyobjc-framework-avfoundation"
+version = "12.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-framework-coreaudio" },
+    { name = "pyobjc-framework-coremedia" },
+    { name = "pyobjc-framework-quartz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/26/7616f0bc8e4eaaba948cf5d220c8f55e0f54f617a2812392a82f19c30f39/pyobjc_framework_avfoundation-12.2.1.tar.gz", hash = "sha256:2735e4f1c345d2b533541577e292f3ad2f75d19200eff99f1a2db16d78b4f1a3", size = 410329, upload-time = "2026-06-19T16:19:52.413Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/88/38ccef918dea4188e0001e644f3bc16e26d11959b04838e5e243798f703a/pyobjc_framework_avfoundation-12.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:d3ce4b2bb2ae51ad5c27f1d2f2a623bef8b443bccc34423b5149df010f9f501c", size = 85536, upload-time = "2026-06-19T16:06:21.308Z" },
+    { url = "https://files.pythonhosted.org/packages/49/bb/e427b2fd705e9dabbfa0ab89b863305788906e34064db2bb930f1c3ba216/pyobjc_framework_avfoundation-12.2.1-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:f372800274df35f8d964cad0ad6da7636f1b6720e802e28e5a6bc1f16f16f135", size = 85578, upload-time = "2026-06-19T16:06:22.292Z" },
+]
+
+[[package]]
 name = "pyobjc-framework-cocoa"
 version = "12.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -815,6 +836,34 @@ sdist = { url = "https://files.pythonhosted.org/packages/51/34/fbe38a204643aa4e1
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/d6/dc66ea8519a0475efbccf73f82cc28066339bb300a27f5e1bf91ab1d7002/pyobjc_framework_cocoa-12.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:dc6da84f4fc62cc25463bbb85e77a57b8d5ac6caf9a60702daf2edb601332f15", size = 387298, upload-time = "2026-06-19T16:07:37.412Z" },
     { url = "https://files.pythonhosted.org/packages/f7/cf/1b3b32b2f28f66cc053c3438ef4e6df36a1591945bf05e7399da18d74553/pyobjc_framework_cocoa-12.2.1-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:28b9b8bab1c36efb94744786918752d0c1842f5fbb67e7d5ca97b5f736512080", size = 388113, upload-time = "2026-06-19T16:07:38.9Z" },
+]
+
+[[package]]
+name = "pyobjc-framework-coreaudio"
+version = "12.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ad/df/f1d402bb7b437374f942bb19410a955a74291867c77a920d9c13887d9e48/pyobjc_framework_coreaudio-12.2.1.tar.gz", hash = "sha256:7dfbf1851523aed453af43a628e057d8950d6e020574aa497a2e4f559b6383c8", size = 78690, upload-time = "2026-06-19T16:20:10.586Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/1f/853c498e18db8b6d9eb0cb2261bf8cda3948f2c925d1c820baaf96fdb54d/pyobjc_framework_coreaudio-12.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:214ce41d1ac3743377f607326d3ff70494dd6f75b2c575fe9c99d3890c545dee", size = 35149, upload-time = "2026-06-19T16:08:10.278Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/c1/1fc7a344ac15646fdf78c91af81028113c87375036e505082cf1f90bd657/pyobjc_framework_coreaudio-12.2.1-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:41a0d8c3b3957f35f17370071aeef94e176d07c9e2130d0aeeb4b260117acd52", size = 35415, upload-time = "2026-06-19T16:08:11.329Z" },
+]
+
+[[package]]
+name = "pyobjc-framework-coremedia"
+version = "12.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e3/79/f501d730a9c320e0b2b3916e95f57e66dd6736d210a1aa5b63eb6c43e605/pyobjc_framework_coremedia-12.2.1.tar.gz", hash = "sha256:71b45f7cd52bd997d836c15a0e1016db90815a219dc87fd20435a6f08b87df7b", size = 98252, upload-time = "2026-06-19T16:20:15.75Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/34/8b97b76f0643e01c98d5c246b1ed74884f4b3c43dfff2a36886212e20dfa/pyobjc_framework_coremedia-12.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:38e03a92a7fdf43162faadf354a8497ae764e3b3be26a8ffb107ed5d743cac76", size = 29513, upload-time = "2026-06-19T16:08:52.69Z" },
+    { url = "https://files.pythonhosted.org/packages/af/17/6bf365530573a6b7719b5a47efe6c38ac8c42f6b556babe419f5de48a84c/pyobjc_framework_coremedia-12.2.1-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:fd0e25bc704dd91882bc29d682880c42f712b39bdfe3d3168780d24a9d9eaf26", size = 29419, upload-time = "2026-06-19T16:08:53.52Z" },
 ]
 
 [[package]]

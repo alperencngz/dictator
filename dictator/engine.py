@@ -24,7 +24,7 @@ import threading
 from typing import Callable
 
 from . import feedback
-from .audio import BufferRecorder
+from .audio import make_recorder
 from .livetyper import LiveTyper
 from .transcribe import Transcriber
 
@@ -78,10 +78,11 @@ class Engine:
         # successful utterance is recorded (text + clip + counts) for BOTH modes.
         self.history = history
         self.on_history = on_history or (lambda e: None)
-        self._recorder = BufferRecorder(
+        self._recorder = make_recorder(
             device=cfg.get("input_device"),
             sample_rate=cfg.get("sample_rate", 16000),
             max_seconds=cfg.get("max_seconds", 120),
+            backend=cfg.get("audio_backend", "auto"),
         )
         self._lock = threading.Lock()
         self._recording = False
