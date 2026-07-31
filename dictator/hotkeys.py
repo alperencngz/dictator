@@ -121,7 +121,7 @@ if _IS_MAC:
             # Only meaningful for a MODIFIER PTT key (e.g. Right Option): when on,
             # we install an ACTIVE HID tap and return None for that keycode's
             # events, so Right Option stops behaving as a normal Option modifier
-            # while dictate runs (use Left Option for Option-typing). For a non-
+            # while dictator runs (use Left Option for Option-typing). For a non-
             # modifier PTT key, or when disabled, we keep the proven listen-only
             # session tap and every event passes through untouched.
             self._swallow = bool(swallow_ptt) and self._ptt_is_mod
@@ -130,7 +130,7 @@ if _IS_MAC:
             try:
                 fn()
             except Exception as e:
-                print(f"[dictate] hotkey callback error: {e}")
+                print(f"[dictator] hotkey callback error: {e}")
 
         # --- the tap callback: runs on the MAIN thread (no TSM here) ---
         def _callback(self, proxy, type_, event, refcon):

@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>ai.turkiye.dictate</string>
+	<string>ai.turkiye.dictator</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/bin/open</string>
 		<string>-a</string>
-		<string>/Applications/Dictate.app</string>
+		<string>/Applications/Dictator.app</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

@@ -108,7 +108,7 @@ class StreamingEngine:
         """A real interpreter multiprocessing can spawn as the worker.
 
         In a py2app bundle sys.executable is the app *stub* (Contents/MacOS/
-        Dictate), which multiprocessing cannot relaunch as a Python worker — it
+        Dictator), which multiprocessing cannot relaunch as a Python worker — it
         just hangs. py2app ships a real interpreter next to the stub
         (Contents/MacOS/python); prefer that. Otherwise fall back to the project
         venv (derived from where this editable package lives), then sys.executable.
@@ -136,9 +136,9 @@ class StreamingEngine:
         spawn_py = self._spawn_python()
         try:
             multiprocessing.set_executable(spawn_py)
-            print(f"[dictate] multiprocessing worker python: {spawn_py}")
+            print(f"[dictator] multiprocessing worker python: {spawn_py}")
         except Exception as e:
-            print(f"[dictate] could not set spawn python ({e}); using {spawn_py}")
+            print(f"[dictator] could not set spawn python ({e}); using {spawn_py}")
 
         realtime_model = self.cfg.get("realtime_model") or self.cfg.get("model", "small")
         self._recorder = AudioToTextRecorder(
@@ -190,7 +190,7 @@ class StreamingEngine:
             self._recording = False
             self._set_state("error")
             feedback.error(self.cfg.get("sound_feedback", True))
-            print(f"[dictate] streaming start failed: {e}")
+            print(f"[dictator] streaming start failed: {e}")
             return
         feedback.start(self.cfg.get("sound_feedback", True))
         self._set_state("recording")
@@ -203,7 +203,7 @@ class StreamingEngine:
         try:
             self._recorder.stop()
         except Exception as e:
-            print(f"[dictate] streaming stop failed: {e}")
+            print(f"[dictator] streaming stop failed: {e}")
         feedback.stop(self.cfg.get("sound_feedback", True))
         self._set_state("transcribing")
         threading.Thread(target=self._finalize, daemon=True).start()
@@ -218,7 +218,7 @@ class StreamingEngine:
         try:
             text = (self._recorder.text() or "").strip()
         except Exception as e:
-            print(f"[dictate] streaming transcription failed: {e}")
+            print(f"[dictator] streaming transcription failed: {e}")
             feedback.error(self.cfg.get("sound_feedback", True))
             self._set_state("idle")
             return
@@ -246,7 +246,7 @@ class StreamingEngine:
                 trailing_space=self.cfg.get("trailing_space", True),
             )
         self.on_text(text)
-        print(f"[dictate] » {text}")
+        print(f"[dictator] » {text}")
         self._set_state("idle")
 
     def shutdown(self) -> None:

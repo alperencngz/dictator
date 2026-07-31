@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dictate</title>
+<title>Dictator</title>
 <style>
   :root {
     --bg: #0a0b0a;
@@ -334,7 +334,7 @@
       <div class="brand-mark">
         <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v10"/><path d="M8 8a4 4 0 0 0 8 0"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/></svg>
       </div>
-      <div class="brand-name">Dictate</div>
+      <div class="brand-name">Dictator</div>
     </div>
     <nav class="nav">
       <a data-view="home" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>Home</a>
@@ -391,7 +391,7 @@
       <div class="topbar">
         <div>
           <h1>Settings</h1>
-          <p>Changes apply immediately and are saved to <span style="font-family:var(--mono)">~/.dictate/config.yaml</span>.</p>
+          <p>Changes apply immediately and are saved to <span style="font-family:var(--mono)">~/.dictator/config.yaml</span>.</p>
         </div>
       </div>
 
@@ -437,12 +437,12 @@
 <div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11L4 12"/></svg><span id="toast-msg">Copied</span></div>
 
 <script>
-const TOKEN = "__DICTATE_TOKEN__";
+const TOKEN = "__DICTATOR_TOKEN__";
 
 /* ---------------- API helpers (token on every request) ---------------- */
 function api(path, opts) {
   opts = opts || {};
-  opts.headers = Object.assign({ "X-Dictate-Token": TOKEN }, opts.headers || {});
+  opts.headers = Object.assign({ "X-Dictator-Token": TOKEN }, opts.headers || {});
   return fetch(path, opts);
 }
 async function apiJSON(path, opts) {
@@ -651,9 +651,9 @@ function buildDetail(row, it) {
     d.querySelector("[data-download]").addEventListener("click", () => {
       const a = document.createElement("a");
       a.href = mediaURL("/api/download", id);
-      a.download = "dictate-" + id + ".wav";
+      a.download = "dictator-" + id + ".wav";
       document.body.appendChild(a); a.click(); a.remove();
-      toast("Saved dictate-" + id + ".wav");
+      toast("Saved dictator-" + id + ".wav");
     });
     // player + waveform
     setupPlayer(row, it, d);

@@ -1,8 +1,20 @@
-# dictate
+# Dictator
 
-**Local push-to-talk dictation.** Hold a key, talk, and the recognized text lands wherever your cursor is — Slack, an AI chat box, an editor, anywhere. 100% on-device via [faster-whisper](https://github.com/SYSTRAN/faster-whisper). No cloud, no rate limits, no per-word cost.
+<img src="assets/readme-hero.png" alt="A cartoon desk dictator shouting orders into a microphone at a row of saluting robot assistants" width="100%">
 
-This is the open, local answer to tools like Wispr Flow / Superwhisper. It reuses the transcription approach proven in the sibling [`listener`](../listener) project but is tuned for **short utterances and low latency**: the model is loaded once and kept warm in memory.
+**Local push-to-talk dictation, for people who'd rather bark orders at their AI agent than type them.** Hold a key, talk, and the recognized text lands wherever your cursor is — your terminal, an AI chat box, an editor, Slack, anywhere. 100% on-device via [faster-whisper](https://github.com/SYSTRAN/faster-whisper). No cloud, no rate limits, no per-word cost.
+
+Built especially for **[Claude Code](https://claude.com/claude-code)**, which has no native push-to-talk: hold the key, ramble your intent for a few minutes the way you'd brief a person, release, and the whole thing lands as text in your prompt.
+
+This is the open, local answer to tools like Wispr Flow / Superwhisper.
+
+## Set it up by pointing an AI agent at this repo
+
+You don't need to read the rest of this file. Clone this repo, then hand your coding agent (Claude Code or similar) this:
+
+> Read `AGENT_SETUP.md` in this repo and follow it to install and run Dictator on this Mac.
+
+It will run every command itself and only stop to ask you for the two things macOS requires a human to click — a Microphone prompt and an Accessibility toggle. See **[AGENT_SETUP.md](AGENT_SETUP.md)** for what it will do, or to run the steps yourself.
 
 ## How it works
 
@@ -20,68 +32,69 @@ hold Right ⌥  ──▶  mic captured to memory  ──▶  faster-whisper (sm
 ## Install
 
 ```bash
-cd ~/Desktop/dictate
+git clone https://github.com/alperencngz/dictator.git
+cd dictator
 uv venv --python 3.12
 uv pip install -e .
 ```
 
 ## Run it as a Mac app (recommended)
 
-`Dictate.app` is a real macOS app — launch it from Spotlight, Finder, or your Dock, no
-terminal needed. It's a py2app **alias-mode** bundle: it runs this repo's `dictate/`
+`Dictator.app` is a real macOS app — launch it from Spotlight, Finder, or your Dock, no
+terminal needed. It's a py2app **alias-mode** bundle: it runs this repo's `dictator/`
 source and `.venv` in place, so it only works on this machine, but source edits go live
 on relaunch with **no rebuild**.
 
 ```bash
 ./mac/build_app.sh
-cp -R dist/Dictate.app /Applications/
+cp -R dist/Dictator.app /Applications/
 ```
 
-Then **⌘Space → "Dictate" → Enter**. It runs headless in the menu bar (🎙️, top-right) —
+Then **⌘Space → "Dictator" → Enter**. It runs headless in the menu bar (🎙️, top-right) —
 no Dock icon, no window, by design (`LSUIElement`).
 
 **Auto-start at login** (so it's already running after every reboot, no manual launch):
 
 ```bash
-cp mac/ai.turkiye.dictate.plist ~/Library/LaunchAgents/   # or symlink it
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictate.plist
+cp mac/ai.turkiye.dictator.plist ~/Library/LaunchAgents/   # or symlink it
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictator.plist
 ```
 
 > **Rebuilding resets its Accessibility grant.** `build_app.sh` re-signs the bundle
 > (ad-hoc signature), and macOS ties the Accessibility permission to that signature — so
 > after every rebuild you must re-grant it: System Settings → Privacy & Security →
-> Accessibility → remove the old "Dictate" entry if present → **+** → re-add
-> `/Applications/Dictate.app` → toggle on. If it still won't take, run
-> `tccutil reset Accessibility ai.turkiye.dictate` first to clear a stale entry, then
+> Accessibility → remove the old "Dictator" entry if present → **+** → re-add
+> `/Applications/Dictator.app` → toggle on. If it still won't take, run
+> `tccutil reset Accessibility ai.turkiye.dictator` first to clear a stale entry, then
 > re-add. Only rebuilding needs this — plain source edits don't.
 
 ## macOS permissions (one-time)
 
-System Settings → Privacy & Security, grant your **terminal app** (or whatever runs `dictate`):
+System Settings → Privacy & Security, grant your **terminal app** (or whatever runs `dictator`):
 
 - **Microphone** — to record you.
-- **Accessibility** — this is the one that matters. It gates **both** the global push-to-talk hotkey (pynput installs a CGEventTap) **and** simulating ⌘V / typing into other apps. If the ready chime plays but holding the key does nothing, this toggle is off.
+- **Accessibility** — this is the one that matters. It gates **both** the global push-to-talk hotkey (a Quartz CGEventTap) **and** simulating ⌘V / typing into other apps. If the ready chime plays but holding the key does nothing, this toggle is off.
 - **Input Monitoring** — usually *not* required for the hotkey. Grant it only if macOS also lists the app here and keystrokes still don't arrive after Accessibility is on.
 
-> **Dictate.app has its own permission identity.** macOS attributes Accessibility / Microphone grants to the specific app bundle that asks. Granting your terminal does **not** grant `Dictate.app` — when you run the bundled app, grant it separately (Settings → Privacy & Security → Accessibility → **+** → select `Dictate.app`). Grants do not transfer between the two.
+> **Dictator.app has its own permission identity.** macOS attributes Accessibility / Microphone grants to the specific app bundle that asks. Granting your terminal does **not** grant `Dictator.app` — when you run the bundled app, grant it separately (Settings → Privacy & Security → Accessibility → **+** → select `Dictator.app`). Grants do not transfer between the two.
 
-Run `dictate doctor` — it probes both permissions live and tells you exactly what's missing.
+Run `dictator doctor` — it probes both permissions live and tells you exactly what's missing.
 
 ## Usage
 
 ```bash
-dictate run            # start the daemon (loads model, then listens)
-dictate devices        # list microphones (set input_device in config)
-dictate config         # show config path + current settings
-dictate test-insert    # focus a field, verifies insertion + permissions
-dictate doctor         # dependency + permissions check
+dictator run            # start the daemon (loads model, then listens)
+dictator devices        # list microphones (set input_device in config)
+dictator config         # show config path + current settings
+dictator test-insert    # focus a field, verifies insertion + permissions
+dictator doctor         # dependency + permissions check
 ```
 
 Then: focus any text field, **hold Right ⌥**, speak, release. The text appears.
 
 ## Configuration
 
-Edit `~/.dictate/config.yaml` (created on first run). Key options:
+Edit `~/.dictator/config.yaml` (created on first run). Key options:
 
 | Key | Default | Notes |
 |-----|---------|-------|
@@ -92,7 +105,7 @@ Edit `~/.dictate/config.yaml` (created on first run). Key options:
 | `insert_method` | `paste` | `paste` or `type` |
 | `paste_fallback_to_type` | `true` | type if paste is blocked |
 | `restore_clipboard` | `true` | put your old clipboard back after pasting |
-| `input_device` | `null` | mic index from `dictate devices` |
+| `input_device` | `null` | mic index from `dictator devices` |
 | `sound_feedback` | `true` | start/stop chime |
 | `menu_bar` | `true` | macOS menu-bar status icon |
 

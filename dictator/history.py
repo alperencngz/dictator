@@ -1,8 +1,8 @@
 """Persistent, thread-safe history of dictated utterances.
 
-Every batch utterance is appended to ``~/.dictate/history.jsonl`` (one JSON
+Every batch utterance is appended to ``~/.dictator/history.jsonl`` (one JSON
 object per line) and, when ``save_audio`` is on, its voice clip is written to
-``~/.dictate/audio/<id>.wav`` so it can later be re-transcribed ("Regenerate").
+``~/.dictator/audio/<id>.wav`` so it can later be re-transcribed ("Regenerate").
 Everything is on-device and local-only.
 
 The store is shared across threads: the engine writes from a worker thread
@@ -26,7 +26,7 @@ import numpy as np
 class HistoryStore:
     def __init__(self, config_dir: Path | None = None, save_audio: bool = True,
                  keep: int = 100, shown: int = 20):
-        self.dir = Path(config_dir) if config_dir else (Path.home() / ".dictate")
+        self.dir = Path(config_dir) if config_dir else (Path.home() / ".dictator")
         self.jsonl = self.dir / "history.jsonl"
         self.audio_dir = self.dir / "audio"
         self.save_audio = save_audio

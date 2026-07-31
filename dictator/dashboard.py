@@ -82,7 +82,7 @@ class DashboardWindow:
                      | NSWindowStyleMaskMiniaturizable)
             window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
                 NSMakeRect(0, 0, w, h), style, NSBackingStoreBuffered, False)
-            window.setTitle_("Dictate")
+            window.setTitle_("Dictator")
             window.setReleasedWhenClosed_(False)
             window.setMinSize_((820.0, 560.0))
             # Dark chrome to match the dashboard's near-black design.
@@ -110,7 +110,7 @@ class DashboardWindow:
             self.webview = webview
             return True
         except Exception as e:
-            print(f"[dictate] dashboard window unavailable: {e}")
+            print(f"[dictator] dashboard window unavailable: {e}")
             self.window = None
             self.webview = None
             return False
@@ -125,7 +125,7 @@ class DashboardWindow:
             NSApp.activateIgnoringOtherApps_(True)
             self.window.makeKeyAndOrderFront_(None)
         except Exception as e:
-            print(f"[dictate] dashboard show failed: {e}")
+            print(f"[dictator] dashboard show failed: {e}")
 
     def toggle(self) -> None:
         if self.window is not None and self.window.isVisible():

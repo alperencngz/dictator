@@ -1,7 +1,7 @@
 # Desirable high-leverage functionalities
 
 **Preconditions:** everything in `IMPLEMENTATION_GUIDE.md` §7 is green — basic
-press-talk-to-text works from Terminal *and* Dictate.app, and streaming HUD-preview mode
+press-talk-to-text works from Terminal *and* Dictator.app, and streaming HUD-preview mode
 works. Do not start anything here before that.
 
 Items are ordered by leverage-per-effort. Each has a gate; treat them like the guide's
@@ -14,7 +14,7 @@ phases — one at a time, user-confirmed. Constraints that always apply: TR+EN s
 
 **What:** keep the last ~20 utterances; render them in a scrollable list in the HUD
 (NSScrollView + NSTableView or a simple text view); click an entry → copy to clipboard.
-Persist to `~/.dictate/history.jsonl` (timestamp, text, duration, mode).
+Persist to `~/.dictator/history.jsonl` (timestamp, text, duration, mode).
 
 **Why high leverage:** it *is* the requested "desktop app view for easy
 logging/debugging" fully realized — a failed paste no longer loses the utterance; the
@@ -162,10 +162,10 @@ liveness safely.
 **Gate:** 3 long dictations into TextEdit with zero corrupted characters and zero lost
 pre-existing text; a deliberate mid-sentence correction by the model reconciles correctly.
 
-## 12. Wake word ("hey dictate") (Effort: M, Leverage: S)
+## 12. Wake word ("hey dictator") (Effort: M, Leverage: S)
 
 **What:** RealtimeSTT supports openwakeword/porcupine backends; add
-`wake_word: null | "hey dictate"` config that arms always-listening activation.
+`wake_word: null | "hey dictator"` config that arms always-listening activation.
 
 **Why ranked last:** PTT is already near-zero friction and strictly more private; a wake
 word means an always-open mic (battery + trust cost). Only worth it if the user

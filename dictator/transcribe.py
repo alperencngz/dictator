@@ -69,7 +69,7 @@ class Transcriber:
             if in_set:
                 return max(in_set, key=lambda lp: lp[1])[0]
         except Exception as e:
-            print(f"[dictate] language detect failed ({e}); using autodetect")
+            print(f"[dictator] language detect failed ({e}); using autodetect")
         return None
 
     def transcribe_detailed(self, audio, language=None) -> dict:

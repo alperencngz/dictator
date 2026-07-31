@@ -30,7 +30,7 @@ def _build(cfg: dict, on_state=None, on_text=None, history=None, on_history=None
     # One unified engine serves both batch and live modes (the Engine switches
     # on cfg["mode"]; legacy "streaming" is treated as "live"). The old
     # RealtimeSTT StreamingEngine is no longer used.
-    print(f"[dictate] loading model {cfg['model']} ({describe_runtime()}) ...")
+    print(f"[dictator] loading model {cfg['model']} ({describe_runtime()}) ...")
     transcriber = Transcriber(
         model_size=cfg["model"],
         device=cfg.get("device", "auto"),
@@ -39,7 +39,7 @@ def _build(cfg: dict, on_state=None, on_text=None, history=None, on_history=None
         languages=cfg.get("languages"),
         vad_filter=cfg.get("vad_filter", True),
     )
-    print("[dictate] warming up ...")
+    print("[dictator] warming up ...")
     transcriber.warm_up()
     engine = Engine(cfg, transcriber, on_state=on_state, on_text=on_text,
                     history=history, on_history=on_history)
@@ -57,7 +57,7 @@ def _build(cfg: dict, on_state=None, on_text=None, history=None, on_history=None
 def _print_ready(cfg: dict) -> None:
     ptt = cfg.get("ptt_key") or "(none)"
     tog = cfg.get("toggle_key") or "(unbound)"
-    print("[dictate] ready.")
+    print("[dictator] ready.")
     print(f"          push-to-talk: hold {ptt}")
     print(f"          toggle:       {tog}")
     print(f"          insert:       {cfg.get('insert_method')} "
@@ -73,7 +73,7 @@ def _announce_ready(cfg: dict) -> None:
     feedback.ready(cfg.get("sound_feedback", True))
     ptt = cfg.get("ptt_key") or "the push-to-talk key"
     feedback.notify(
-        "Dictate is ready",
+        "Dictator is ready",
         f"Hold {ptt} (Right ⌥) and speak — text lands at your cursor.",
     )
 
@@ -100,16 +100,16 @@ def _run_headless(cfg: dict) -> None:
     try:
         hotkeys.join()
     except KeyboardInterrupt:
-        print("\n[dictate] bye.")
+        print("\n[dictator] bye.")
         hotkeys.stop()
 
 
 def _run_menu_bar(cfg: dict) -> None:
     import rumps
 
-    class DictateApp(rumps.App):
+    class DictatorApp(rumps.App):
         def __init__(self):
-            # quit_button=None: we install our own "Quit dictate" item below so we
+            # quit_button=None: we install our own "Quit dictator" item below so we
             # can stop the hotkey listener + engine (and reap RealtimeSTT workers)
             # before the process dies, instead of leaving a zombie holding the mic.
             super().__init__("🎙️", quit_button=None)
@@ -122,7 +122,7 @@ def _run_menu_bar(cfg: dict) -> None:
                                              callback=self._menu_mode)
             self._mode_item.state = 1 if self._live_mode else 0
             self.menu = ["Open Dashboard", "Start / stop recording",
-                         self._mode_item, "Open log", None, "Quit dictate"]
+                         self._mode_item, "Open log", None, "Quit dictator"]
             self.engine = None
             self.hotkeys = None
             # State + transcript are produced on background threads; stash them
@@ -158,7 +158,7 @@ def _run_menu_bar(cfg: dict) -> None:
                     shown=cfg.get("history_shown", 20),
                 )
             except Exception as e:
-                print(f"[dictate] history unavailable: {e}")
+                print(f"[dictator] history unavailable: {e}")
             # The old floating HUD is off by default now that the dashboard is
             # the app view; opt back in with show_hud: true. When built it still
             # shows live state/transcript/history alongside the dashboard.
@@ -172,7 +172,7 @@ def _run_menu_bar(cfg: dict) -> None:
                                    on_mode=self._hud_mode)
                     self.hud.set_mode(self._live_mode)  # reflect the initial mode
                 except Exception as e:
-                    print(f"[dictate] HUD unavailable, menu-bar only: {e}")
+                    print(f"[dictator] HUD unavailable, menu-bar only: {e}")
             # Embedded dashboard: a WKWebView window backed by a loopback HTTP
             # server. Constructed here on the main thread; the server binds
             # lazily on first open (DashboardWindow.show -> server.start).
@@ -199,7 +199,7 @@ def _run_menu_bar(cfg: dict) -> None:
                 )
                 self.dashboard_window = DashboardWindow(self.dashboard_server)
             except Exception as e:
-                print(f"[dictate] dashboard unavailable: {e}")
+                print(f"[dictator] dashboard unavailable: {e}")
             # Build the model off the UI thread so the window/icon show at once.
             threading.Thread(target=self._boot, daemon=True).start()
 
@@ -220,10 +220,10 @@ def _run_menu_bar(cfg: dict) -> None:
                 traceback.print_exc()
                 self._on_state("error")
                 self._pending_text = (f"Startup failed: {e}\n"
-                                      f"See ~/.dictate/dictate.log")
+                                      f"See ~/.dictator/dictator.log")
                 feedback.error(cfg.get("sound_feedback", True))
-                feedback.notify("Dictate failed to start", str(e),
-                                "See ~/.dictate/dictate.log")
+                feedback.notify("Dictator failed to start", str(e),
+                                "See ~/.dictator/dictator.log")
 
         # --- callbacks from engine threads: stash only ---
         def _on_state(self, state: str):
@@ -264,7 +264,7 @@ def _run_menu_bar(cfg: dict) -> None:
             warms the fast partial model on a background thread), reflects the
             new mode in both controls, keeps the in-memory cfg in sync so a
             not-yet-booted engine comes up in the right mode, and persists the
-            choice to ~/.dictate/config.yaml for next launch.
+            choice to ~/.dictator/config.yaml for next launch.
             """
             live = bool(live)
             self._live_mode = live
@@ -278,12 +278,12 @@ def _run_menu_bar(cfg: dict) -> None:
                 try:
                     self.engine.set_live(live)
                 except Exception as e:
-                    print(f"[dictate] mode switch failed: {e}")
+                    print(f"[dictator] mode switch failed: {e}")
             # Persist for next launch.
             try:
                 config.save_value("mode", "live" if live else "batch")
             except Exception as e:
-                print(f"[dictate] could not persist mode: {e}")
+                print(f"[dictator] could not persist mode: {e}")
             # Loading hint: enabling live warms the fast model in the background.
             if live:
                 warming = (self.engine is None
@@ -332,7 +332,7 @@ def _run_menu_bar(cfg: dict) -> None:
                     pass
                 feedback.notify("Regenerated", new_text[:60] or "(empty)")
             except Exception as e:
-                print(f"[dictate] regenerate failed: {e}")
+                print(f"[dictator] regenerate failed: {e}")
                 feedback.notify("Regenerate failed", str(e))
 
         # --- dashboard providers (called from the server's HTTP thread) ---
@@ -343,7 +343,7 @@ def _run_menu_bar(cfg: dict) -> None:
                 try:
                     return self.store.stats()
                 except Exception as e:
-                    print(f"[dictate] stats failed: {e}")
+                    print(f"[dictator] stats failed: {e}")
             return {"words": 0, "wpm": 0.0, "streak": 0, "dictations": 0}
 
         def _dash_regenerate(self, entry_id: str, lang: str) -> str:
@@ -398,7 +398,7 @@ def _run_menu_bar(cfg: dict) -> None:
             try:
                 config.save_value(key, value)
             except Exception as e:
-                print(f"[dictate] could not persist {key}: {e}")
+                print(f"[dictator] could not persist {key}: {e}")
             if key == "mode":
                 live = (value == "live")
                 self._live_mode = live
@@ -407,7 +407,7 @@ def _run_menu_bar(cfg: dict) -> None:
                     try:
                         self.engine.set_live(live)
                     except Exception as e:
-                        print(f"[dictate] mode apply failed: {e}")
+                        print(f"[dictator] mode apply failed: {e}")
             elif key == "language":
                 cfg["language"] = value
                 engine = self.engine
@@ -434,7 +434,7 @@ def _run_menu_bar(cfg: dict) -> None:
                 try:
                     self.dashboard_window.show()
                 except Exception as e:
-                    print(f"[dictate] dashboard open failed: {e}")
+                    print(f"[dictator] dashboard open failed: {e}")
 
         def _menu_show(self, _):
             if self.hud is not None:
@@ -446,11 +446,11 @@ def _run_menu_bar(cfg: dict) -> None:
         def _menu_open_log(self, _):
             import subprocess
             from pathlib import Path
-            log_path = Path.home() / ".dictate" / "dictate.log"
+            log_path = Path.home() / ".dictator" / "dictator.log"
             try:
                 subprocess.Popen(["open", str(log_path)])
             except Exception as e:
-                print(f"[dictate] could not open log: {e}")
+                print(f"[dictator] could not open log: {e}")
 
         def _menu_quit(self, _):
             # Stop input + engine so nothing keeps the mic after quit. RealtimeSTT
@@ -478,15 +478,15 @@ def _run_menu_bar(cfg: dict) -> None:
                     and self._pending_state == "loading"
                     and time.monotonic() - self._boot_started > 90):
                 self._watchdog_fired = True
-                print("[dictate] still loading after 90s — first run may be "
+                print("[dictator] still loading after 90s — first run may be "
                       "downloading a model; otherwise likely a worker spawn failure")
                 self._on_state("error")
                 self._pending_text = ("Still loading after 90s. A first run may be\n"
                                       "downloading a model; otherwise likely a worker\n"
-                                      "spawn failure. See ~/.dictate/dictate.log")
-                feedback.notify("Dictate still loading",
+                                      "spawn failure. See ~/.dictator/dictator.log")
+                feedback.notify("Dictator still loading",
                                 "Over 90s — a first run may be downloading a model; "
-                                "otherwise see ~/.dictate/dictate.log")
+                                "otherwise see ~/.dictator/dictator.log")
             # Auto-open the dashboard once, just after launch (main thread, run
             # loop live). The old floating HUD no longer opens by default.
             if (not self._dashboard_opened
@@ -496,7 +496,7 @@ def _run_menu_bar(cfg: dict) -> None:
                 try:
                     self.dashboard_window.show()
                 except Exception as e:
-                    print(f"[dictate] dashboard auto-open failed: {e}")
+                    print(f"[dictator] dashboard auto-open failed: {e}")
             if self.title != self._pending_title:
                 self.title = self._pending_title
             # Reflect the Live/Final-only mode. _live_mode is flipped by the menu,
@@ -531,11 +531,11 @@ def _run_menu_bar(cfg: dict) -> None:
                     try:
                         self.hud.refresh_history()
                     except Exception as e:
-                        print(f"[dictate] history refresh failed: {e}")
+                        print(f"[dictator] history refresh failed: {e}")
 
-    app = DictateApp()
+    app = DictatorApp()
     app.menu["Open Dashboard"].set_callback(app._menu_dashboard)
     app.menu["Start / stop recording"].set_callback(app._menu_toggle)
     app.menu["Open log"].set_callback(app._menu_open_log)
-    app.menu["Quit dictate"].set_callback(app._menu_quit)
+    app.menu["Quit dictator"].set_callback(app._menu_quit)
     app.run()

@@ -84,6 +84,13 @@ class Engine:
         )
         self._lock = threading.Lock()
         self._recording = False
+        # Guards the actual recorder.start()/recorder.stop() CoreAudio calls.
+        # Both now run on background threads (see start()/stop()'s comments), so
+        # a fast tap-tap can otherwise race a start-thread and a stop-thread
+        # against each other on the same PortAudio stream — something the old
+        # code got for free by running both synchronously on the single-
+        # threaded hotkey callback. This restores that serialization.
+        self._audio_io_lock = threading.Lock()
 
         # --- live mode ---
         # Runtime-settable; phase-2 UI flips this via set_live(). Legacy config
@@ -156,7 +163,7 @@ class Engine:
             with self._fast_lock:
                 self._fast = fast
         except Exception as e:
-            print(f"[dictate] fast model load failed: {e}")
+            print(f"[dictator] fast model load failed: {e}")
         finally:
             with self._fast_lock:
                 self._fast_loading = False
@@ -171,14 +178,38 @@ class Engine:
             self._utterance += 1
             gen = self._utterance
         self._active_live = live
+        # Opening the PortAudio stream calls into CoreAudio's HAL and can block
+        # for real — the mirror image of stop()'s deadlock, seen live stuck in
+        # AudioDeviceCreateIOProcID. This runs on the CGEventTap callback on the
+        # MAIN thread, so do the actual open on a background thread; only flip
+        # state/play the chime once it succeeds, so a rare hang here strands
+        # just this thread instead of freezing the whole app.
+        threading.Thread(target=self._start_capture,
+                         args=(gen, live), daemon=True).start()
+
+    def _start_capture(self, gen: int, live: bool) -> None:
         try:
-            self._recorder.start()
+            with self._audio_io_lock:
+                self._recorder.start()
         except Exception as e:
-            self._recording = False
+            with self._lock:
+                if gen == self._utterance:
+                    self._recording = False
             self._active_live = False
             self._set_state("error")
             feedback.error(self.cfg.get("sound_feedback", True))
-            print(f"[dictate] capture failed: {e}")
+            print(f"[dictator] capture failed: {e}")
+            return
+        with self._lock:
+            still_current = gen == self._utterance and self._recording
+        if not still_current:
+            # stop() (or a newer start()) already ran while we were opening the
+            # stream — close it out quietly instead of getting stuck "recording".
+            try:
+                with self._audio_io_lock:
+                    self._recorder.stop()
+            except Exception:
+                pass
             return
         feedback.start(self.cfg.get("sound_feedback", True))
         self._set_state("recording")
@@ -260,7 +291,7 @@ class Engine:
             try:
                 partial = fast.transcribe(audio)  # TR/EN constrained
             except Exception as e:
-                print(f"[dictate] live partial failed: {e}")
+                print(f"[dictator] live partial failed: {e}")
                 continue
             partial = (partial or "").strip()
             if not partial:
@@ -277,7 +308,7 @@ class Engine:
                 try:
                     self._live_typer.sync(stable)
                 except Exception as e:
-                    print(f"[dictate] live typing failed: {e}")
+                    print(f"[dictator] live typing failed: {e}")
             try:
                 self.on_text(partial)  # HUD shows the full latest partial
             except Exception:
@@ -286,9 +317,10 @@ class Engine:
     def _finish(self, gen: int, live: bool) -> None:
         from . import inject
         try:
-            audio = self._recorder.stop()
+            with self._audio_io_lock:
+                audio = self._recorder.stop()
         except Exception as e:
-            print(f"[dictate] stopping capture failed: {e}")
+            print(f"[dictator] stopping capture failed: {e}")
             if live:
                 self._erase_live()
             self.on_text("")  # clear the HUD's last partial
@@ -300,7 +332,7 @@ class Engine:
         try:
             detail = self.transcriber.transcribe_detailed(audio)
         except Exception as e:
-            print(f"[dictate] transcription failed: {e}")
+            print(f"[dictator] transcription failed: {e}")
             if live:
                 self._erase_live()
             self.on_text("")  # clear the HUD's last partial
@@ -332,9 +364,9 @@ class Engine:
                         self._live_typer.sync(text)
                         self._live_typer.finish(
                             trailing_space=self.cfg.get("trailing_space", True))
-                        print(f"[dictate] »live {text}")
+                        print(f"[dictator] »live {text}")
                     except Exception as e:
-                        print(f"[dictate] live reconcile failed: {e}")
+                        print(f"[dictator] live reconcile failed: {e}")
         else:
             ok = inject.insert_text(
                 text,
@@ -345,9 +377,9 @@ class Engine:
             )
             if not ok:
                 feedback.error(self.cfg.get("sound_feedback", True))
-                print(f"[dictate] insert failed; transcript was: {text!r}")
+                print(f"[dictator] insert failed; transcript was: {text!r}")
             else:
-                print(f"[dictate] » {text}")
+                print(f"[dictator] » {text}")
 
         # Record to history (best-effort: a history failure must never break
         # dictation). The HUD picks this up via the store's version bump.
@@ -365,7 +397,7 @@ class Engine:
                 )
                 self.on_history(entry)
             except Exception as e:
-                print(f"[dictate] history write failed: {e}")
+                print(f"[dictator] history write failed: {e}")
 
         self.on_text(text)
         self._set_state("idle")

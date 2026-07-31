@@ -3,11 +3,11 @@
 A tiny ``ThreadingHTTPServer`` bound to ``127.0.0.1`` on an *ephemeral* port. It
 serves the packaged ``web/dashboard.html`` (with a per-launch random token
 substituted in) and a small JSON/media API the page calls. The WKWebView window
-(``dictate.dashboard``) loads ``server.url``.
+(``dictator.dashboard``) loads ``server.url``.
 
 Security model: the server is loopback-only, and a random ``secrets``-derived
 token gates every ``/api/*`` request. The served HTML embeds that token and
-sends it as the ``X-Dictate-Token`` header on each call; the ``<audio>`` element
+sends it as the ``X-Dictator-Token`` header on each call; the ``<audio>`` element
 and the download anchor cannot set headers, so those two GET endpoints also
 accept the token as a ``?t=`` query parameter. Any request without the right
 token gets a 403 — so another local process or page can't read the user's
@@ -31,7 +31,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
-_TOKEN_PLACEHOLDER = "__DICTATE_TOKEN__"
+_TOKEN_PLACEHOLDER = "__DICTATOR_TOKEN__"
 
 
 def _lang_label(language) -> str:
@@ -93,7 +93,7 @@ class DashboardServer:
             self.port = httpd.server_address[1]
             self.url = f"http://{self.host}:{self.port}/"
             self._thread = threading.Thread(
-                target=httpd.serve_forever, name="dictate-dashboard",
+                target=httpd.serve_forever, name="dictator-dashboard",
                 daemon=True)
             self._thread.start()
             return self.url
@@ -215,7 +215,7 @@ def _make_handler(server: DashboardServer):
         def _authed(self, query: dict) -> bool:
             # compare_digest raises on non-ASCII; our token is url-safe ASCII, so
             # a non-ASCII candidate is simply a failed auth (clean 403, not a 500).
-            hdr = self.headers.get("X-Dictate-Token", "")
+            hdr = self.headers.get("X-Dictator-Token", "")
             if hdr and hdr.isascii() and secrets.compare_digest(hdr, server.token):
                 return True
             qt = (query.get("t") or [""])[0]
@@ -384,7 +384,7 @@ def _make_handler(server: DashboardServer):
             if download:
                 headers.append(
                     ("Content-Disposition",
-                     f'attachment; filename="dictate-{entry_id}.wav"'))
+                     f'attachment; filename="dictator-{entry_id}.wav"'))
 
             rng = self.headers.get("Range")
             start, end = self._parse_range(rng, total)

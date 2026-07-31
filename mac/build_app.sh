@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Dictate.app (py2app alias mode) into ./dist/Dictate.app
+# Build Dictator.app (py2app alias mode) into ./dist/Dictator.app
 #
 # Alias mode references this repo's .venv in place, so the app must stay on
 # this machine with the venv where it is. Rebuilds are instant.
@@ -22,15 +22,15 @@ echo "[build] cleaning previous build ..."
 rm -rf "$REPO/build" "$REPO/dist"
 mkdir -p "$STAGE"
 
-echo "[build] building Dictate.app (alias mode) ..."
+echo "[build] building Dictator.app (alias mode) ..."
 ( cd "$STAGE" && "$PY" "$REPO/setup_app.py" py2app -A )
 
 echo "[build] placing app in ./dist ..."
 mkdir -p "$REPO/dist"
-rm -rf "$REPO/dist/Dictate.app"
-mv "$STAGE/dist/Dictate.app" "$REPO/dist/Dictate.app"
+rm -rf "$REPO/dist/Dictator.app"
+mv "$STAGE/dist/Dictator.app" "$REPO/dist/Dictator.app"
 rm -rf "$STAGE"
 
 echo
-echo "[build] done -> dist/Dictate.app"
-echo "[build] launch it with:  open dist/Dictate.app"
+echo "[build] done -> dist/Dictator.app"
+echo "[build] launch it with:  open dist/Dictator.app"

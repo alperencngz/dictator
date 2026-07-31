@@ -168,7 +168,7 @@ class HUD:
                  | NSWindowStyleMaskNonactivatingPanel)
         panel = NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
             rect, style, NSBackingStoreBuffered, False)
-        panel.setTitle_("Dictate")
+        panel.setTitle_("Dictator")
         panel.setLevel_(_FLOATING_LEVEL)
         panel.setFloatingPanel_(True)
         panel.setBecomesKeyOnlyIfNeeded_(True)

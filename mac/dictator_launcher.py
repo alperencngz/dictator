@@ -1,11 +1,11 @@
-"""Entry point for the Dictate.app bundle (py2app).
+"""Entry point for the Dictator.app bundle (py2app).
 
 Launched by macOS LaunchServices, not a terminal — so there is no console.
-stdout/stderr are redirected to ~/.dictate/dictate.log so a failed launch is
+stdout/stderr are redirected to ~/.dictator/dictator.log so a failed launch is
 debuggable, and the menu-bar (rumps) UI is forced on regardless of config.
 
 The whole point of running as a bundle: the app owns its own Accessibility /
-Microphone TCC identity (ai.turkiye.dictate), independent of whichever
+Microphone TCC identity (ai.turkiye.dictator), independent of whichever
 terminal happened to launch it — so the permission grant sticks.
 
 Everything with side effects lives inside main(), which only runs in the real
@@ -25,22 +25,22 @@ from pathlib import Path
 
 
 def main() -> None:
-    log_dir = Path.home() / ".dictate"
+    log_dir = Path.home() / ".dictator"
     log_dir.mkdir(parents=True, exist_ok=True)
     # RealtimeSTT's worker writes realtimesst.log into the process cwd. Point cwd
-    # at ~/.dictate so that log lands beside dictate.log instead of polluting the
+    # at ~/.dictator so that log lands beside dictator.log instead of polluting the
     # repo root (terminal runs) or Contents/Resources (Finder launches).
     os.chdir(log_dir)
-    # Line-buffered append so `tail -f ~/.dictate/dictate.log` shows live output.
+    # Line-buffered append so `tail -f ~/.dictator/dictator.log` shows live output.
     # encoding="utf-8" is required: launched via LaunchServices (Spotlight/Dock/
     # login item) the process has no inherited shell locale, so Python's default
     # text encoding falls back to ASCII and any non-ASCII print() (the "»" marker,
     # Turkish transcript text, emoji) raises UnicodeEncodeError mid-_finish(),
     # killing that thread before it resets state or records history.
-    log = open(log_dir / "dictate.log", "a", buffering=1, encoding="utf-8")
+    log = open(log_dir / "dictator.log", "a", buffering=1, encoding="utf-8")
     sys.stdout = log
     sys.stderr = log
-    print(f"\n[dictate] === launch {datetime.now().isoformat(timespec='seconds')} ===")
+    print(f"\n[dictator] === launch {datetime.now().isoformat(timespec='seconds')} ===")
 
     # py2app sets sys.frozen = "macosx_app" in __boot__.py. multiprocessing.spawn's
     # get_command_line() then takes its frozen-exe branch: it execs sys.executable
@@ -52,8 +52,8 @@ def main() -> None:
     if getattr(sys, "frozen", None):
         del sys.frozen
 
-    from dictate.app import run
-    from dictate.config import load_config
+    from dictator.app import run
+    from dictator.config import load_config
 
     cfg = load_config()
     cfg["menu_bar"] = True  # always show the status icon when run as an app

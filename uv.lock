@@ -198,7 +198,7 @@ nvtx = [
 ]
 
 [[package]]
-name = "dictate"
+name = "dictator"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

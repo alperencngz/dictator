@@ -1,4 +1,4 @@
-"""dictate command-line entry point."""
+"""dictator command-line entry point."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .config import CONFIG_PATH, load_config
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx):
-    """Local push-to-talk dictation. Run `dictate run` to start."""
+    """Local push-to-talk dictation. Run `dictator run` to start."""
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 
@@ -47,7 +47,7 @@ def test_insert(text):
     """Insert TEXT (default: a sample) at the cursor to verify permissions."""
     from . import inject
     cfg = load_config()
-    sample = text or "dictate insertion test ✅"
+    sample = text or "dictator insertion test ✅"
     click.echo("Focus a text field; inserting in 3 seconds...")
     import time
     time.sleep(3)
@@ -81,7 +81,7 @@ def doctor():
     # Accessibility gates BOTH the pynput global hotkey listener (it installs a
     # CGEventTap) AND synthetic ⌘V / typing injection. Input Monitoring does NOT
     # gate the hotkey here — that was long-standing misinformation. This result
-    # reflects the process running `doctor` (your terminal), NOT Dictate.app.
+    # reflects the process running `doctor` (your terminal), NOT Dictator.app.
     try:
         from ApplicationServices import AXIsProcessTrusted
         trusted = bool(AXIsProcessTrusted())
@@ -109,12 +109,12 @@ def doctor():
             click.echo(f"  ✅ Microphone: capturing audio (RMS={rms:.5f})")
         else:
             click.echo(f"  ❌ Microphone: silent (RMS={rms:.5f}) — no grant, muted, "
-                       f"or wrong input_device (see `dictate devices`)")
+                       f"or wrong input_device (see `dictator devices`)")
     except Exception as e:
         click.echo(f"  ⚠️  Microphone: could not read ({e})")
 
     click.echo("\nGrants attach per app identity and do NOT transfer:")
-    click.echo("  • your terminal app  → for `dictate run`")
-    click.echo("  • Dictate.app        → for the bundled app (grant it separately)")
+    click.echo("  • your terminal app  → for `dictator run`")
+    click.echo("  • Dictator.app       → for the bundled app (grant it separately)")
     click.echo("  Input Monitoring: grant it only if macOS lists the app there and "
                "keys still don't arrive after Accessibility is on.")

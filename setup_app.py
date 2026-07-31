@@ -1,4 +1,4 @@
-"""py2app build script for Dictate.app (alias mode).
+"""py2app build script for Dictator.app (alias mode).
 
 Build it with the convenience wrapper:
 
@@ -25,24 +25,24 @@ from setuptools import setup
 # repo's pyproject.toml — setuptools would otherwise read its [project]
 # dependencies as install_requires, which py2app rejects).
 _HERE = os.path.dirname(os.path.abspath(__file__))
-APP = [os.path.join(_HERE, "mac", "dictate_launcher.py")]
+APP = [os.path.join(_HERE, "mac", "dictator_launcher.py")]
 
 OPTIONS = {
     "argv_emulation": False,  # Carbon-based; broken on Apple Silicon. Leave off.
-    "iconfile": os.path.join(_HERE, "mac", "Dictate.icns"),
+    "iconfile": os.path.join(_HERE, "mac", "Dictator.icns"),
     "plist": {
-        "CFBundleName": "Dictate",
-        "CFBundleDisplayName": "Dictate",
-        "CFBundleIdentifier": "ai.turkiye.dictate",
+        "CFBundleName": "Dictator",
+        "CFBundleDisplayName": "Dictator",
+        "CFBundleIdentifier": "ai.turkiye.dictator",
         "CFBundleVersion": "0.1.0",
         "CFBundleShortVersionString": "0.1.0",
         # Menu-bar agent: no Dock icon, no app-switcher entry (Gladio-like).
         "LSUIElement": True,
         # Required or macOS kills the app the moment it touches the mic.
         "NSMicrophoneUsageDescription":
-            "Dictate records the microphone while you hold the push-to-talk key.",
+            "Dictator records the microphone while you hold the push-to-talk key.",
         "NSAppleEventsUsageDescription":
-            "Dictate pastes transcribed text into the app you're typing in.",
+            "Dictator pastes transcribed text into the app you're typing in.",
     },
 }
 

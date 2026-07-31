@@ -47,6 +47,28 @@ historical record. Since then, **Phase 4 and Phase 6 are done and user-confirmed
 Phase 5 (streaming mode) was **not** touched this pass — `mode: batch` remains the
 default and is what was tested above.
 
+**Same-day follow-up — CoreAudio deadlock fixed.** After the above, the user hit an
+app-wide freeze (SPOD cursor, unresponsive menu bar) mid-dictation. Live-sampled the hung
+process (`sample <pid>`): the main thread — which also owns the CGEventTap hotkey
+callback and the whole NSApplication run loop — was blocked inside `AudioOutputUnitStop`
+waiting on a CoreAudio HAL mutex, while the audio device's own IO thread was
+simultaneously blocked waiting on the same mutex from the other side. A genuine CoreAudio
+deadlock, not a Python bug, but `engine.py`'s `stop()` called `recorder.stop()`
+synchronously **on the CGEventTap callback thread** (the main thread), so the deadlock
+froze the entire app instead of just one utterance. Fixed by moving the actual
+`recorder.stop()` call into `_finish`'s background thread; `stop()` (the hotkey-callback
+path) is now state-flips-and-thread-spawn only and can never block the main thread again.
+If the underlying CoreAudio race recurs, only that utterance's background thread strands.
+
+**Same-day rename — Dictate → Dictator.** The app, Python package (`dictate/` →
+`dictator/`), CLI command, bundle ID (`ai.turkiye.dictate` → `ai.turkiye.dictator`), data
+dir (`~/.dictate` → `~/.dictator`), and all docs were renamed (the GitHub remote was
+already `alperencngz/dictator`; the code just hadn't caught up). This document's body
+below predates the rename and still says "Dictate" / `~/.dictate` throughout — it's a
+historical record of the 2026-07-08 diagnosis and is intentionally left as-is rather than
+retrofitted. A public, agent-oriented install guide now lives at `AGENT_SETUP.md`
+(distinct from this file, which is an internal diagnosis journal, not a setup doc).
+
 ---
 
 ## 1. Mission

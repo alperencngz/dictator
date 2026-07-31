@@ -1,6 +1,6 @@
-"""Configuration loading for dictate.
+"""Configuration loading for dictator.
 
-Config lives at ~/.dictate/config.yaml and is created with sensible
+Config lives at ~/.dictator/config.yaml and is created with sensible
 defaults on first run. Everything is overridable from there.
 """
 
@@ -17,7 +17,7 @@ import yaml
 # thread (menu/HUD toggle) and the dashboard's HTTP thread concurrently.
 _SAVE_LOCK = threading.Lock()
 
-CONFIG_DIR = Path.home() / ".dictate"
+CONFIG_DIR = Path.home() / ".dictator"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 
 DEFAULTS: dict[str, Any] = {
@@ -52,7 +52,7 @@ DEFAULTS: dict[str, Any] = {
     "vad_filter": True,           # drop silence with built-in VAD
 
     # --- Audio capture ---
-    "input_device": None,         # None = system default mic; or device index (see `dictate devices`)
+    "input_device": None,         # None = system default mic; or device index (see `dictator devices`)
     "sample_rate": 16000,         # Whisper wants 16k mono
     "max_seconds": 120,           # hard cap on a single utterance
 
@@ -63,7 +63,7 @@ DEFAULTS: dict[str, Any] = {
     "toggle_key": None,
     # Swallow (consume) the PTT key so it doesn't also reach the focused app.
     # When true (and the PTT key is a modifier), Right Option no longer acts as a
-    # normal Option modifier while dictate runs — use LEFT Option for Option-typing.
+    # normal Option modifier while dictator runs — use LEFT Option for Option-typing.
     # Set false to keep the key passing through (its plain modifier still works).
     "swallow_ptt": True,
 
@@ -89,7 +89,7 @@ DEFAULTS: dict[str, Any] = {
     "post_speech_silence_duration": 0.6,  # silence (s) that marks end-of-utterance
 
     # --- History / voice clips (batch mode) ---
-    # Store each utterance (text + a local WAV of your voice) under ~/.dictate so
+    # Store each utterance (text + a local WAV of your voice) under ~/.dictator so
     # the HUD can show history and the Regenerate button can re-transcribe a clip.
     "save_audio": True,               # keep voice clips locally, on-device (needed for Regenerate)
     "history_keep": 100,              # max clips retained on disk (older ones are pruned)
@@ -128,7 +128,7 @@ def load_config() -> dict[str, Any]:
 
 
 def save_value(key: str, value: Any) -> None:
-    """Persist a single top-level config key to ~/.dictate/config.yaml.
+    """Persist a single top-level config key to ~/.dictator/config.yaml.
 
     Loads the on-disk config, sets ``key`` to ``value``, and writes it back
     preserving every other key and the file's formatting conventions
