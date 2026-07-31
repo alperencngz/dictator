@@ -100,7 +100,7 @@ tail -15 ~/.dictator/dictator.log
 
 You should now see `[dictator] ready.` with no `RuntimeError`. If the `RuntimeError`
 persists after a confirmed grant, there's likely a stale duplicate entry — run
-`tccutil reset Accessibility ai.turkiye.dictator`, have the user re-add it via **+** one
+`tccutil reset Accessibility io.github.alperencngz.dictator`, have the user re-add it via **+** one
 more time, and repeat the relaunch check.
 
 ## 6. [USER] Microphone (heads-up, not a blocking step)
@@ -116,12 +116,12 @@ user:
 ## 7. Optional: auto-start at login
 
 ```bash
-cp mac/ai.turkiye.dictator.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictator.plist
+cp mac/io.github.alperencngz.dictator.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.alperencngz.dictator.plist
 ```
 
 (Or symlink instead of copying, if you want edits to the repo's plist to apply without
-reinstalling: `ln -s "$(pwd)/mac/ai.turkiye.dictator.plist" ~/Library/LaunchAgents/`.)
+reinstalling: `ln -s "$(pwd)/mac/io.github.alperencngz.dictator.plist" ~/Library/LaunchAgents/`.)
 
 ## 8. Hand back to the user
 
@@ -139,7 +139,7 @@ Setup is complete once step 5's log check is clean. Tell the user:
 - **"It was working, then I rebuilt the app, now Accessibility is broken again":**
   expected — rebuilding re-signs the bundle and macOS ties the grant to that signature.
   Re-add via System Settings → Accessibility → **+**, or `tccutil reset Accessibility
-  ai.turkiye.dictator` first if a stale entry won't take.
+  io.github.alperencngz.dictator` first if a stale entry won't take.
 - **`dictator doctor`** (from a terminal) probes Accessibility + Microphone live and
   reports exactly what's missing — but note it reports for *whatever process runs it*
   (your terminal), not for `Dictator.app`; the two have separate permission identities.
@@ -149,8 +149,8 @@ Setup is complete once step 5's log check is clean. Tell the user:
 ## Uninstalling
 
 ```bash
-launchctl bootout gui/$(id -u)/ai.turkiye.dictator 2>/dev/null
-rm -f ~/Library/LaunchAgents/ai.turkiye.dictator.plist
+launchctl bootout gui/$(id -u)/io.github.alperencngz.dictator 2>/dev/null
+rm -f ~/Library/LaunchAgents/io.github.alperencngz.dictator.plist
 rm -rf /Applications/Dictator.app
 rm -rf ~/.dictator   # deletes saved config, history, and voice clips
 ```

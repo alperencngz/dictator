@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>ai.turkiye.dictator</string>
+	<string>io.github.alperencngz.dictator</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/bin/open</string>

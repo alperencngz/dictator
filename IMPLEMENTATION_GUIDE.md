@@ -21,7 +21,7 @@ historical record. Since then, **Phase 4 and Phase 6 are done and user-confirmed
   lands text, dashboard shows the entry.
 - **Custom icon** (`mac/Dictate.icns`, lime-on-near-black mic glyph) wired into
   `setup_app.py` via `iconfile`.
-- **Autostart at login** — Phase 6 done, per spec, via `mac/ai.turkiye.dictate.plist`
+- **Autostart at login** — Phase 6 done, per spec, via `mac/io.github.alperencngz.dictator.plist`
   (symlinked into `~/Library/LaunchAgents/`), targeting `/Applications/Dictate.app`
   instead of `dist/`.
 - **New landmine discovered and fixed** (add to §6): rebuilding the `.app` (for the icon)
@@ -29,7 +29,7 @@ historical record. Since then, **Phase 4 and Phase 6 are done and user-confirmed
   keys the permission to. Confirmed by reproduction: `CGEventTapCreate` returned `None`
   (`hotkeys.py` RuntimeError) immediately after a rebuild that worked fine before it.
   Fixed operationally by re-granting (a stale duplicate list entry needed
-  `tccutil reset Accessibility ai.turkiye.dictate` first). **Do not rebuild the .app
+  `tccutil reset Accessibility io.github.alperencngz.dictator` first). **Do not rebuild the .app
   casually** — only for icon/plist/setup_app.py changes, never for routine source edits
   (alias mode already picks those up live).
 - **New bug found and fixed** (not anticipated by RC1-RC6): `mac/dictate_launcher.py`
@@ -61,7 +61,7 @@ path) is now state-flips-and-thread-spawn only and can never block the main thre
 If the underlying CoreAudio race recurs, only that utterance's background thread strands.
 
 **Same-day rename — Dictate → Dictator.** The app, Python package (`dictate/` →
-`dictator/`), CLI command, bundle ID (`ai.turkiye.dictate` → `ai.turkiye.dictator`), data
+`dictator/`), CLI command, bundle ID (now `io.github.alperencngz.dictator`), data
 dir (`~/.dictate` → `~/.dictator`), and all docs were renamed (the GitHub remote was
 already `alperencngz/dictator`; the code just hadn't caught up). This document's body
 below predates the rename and still says "Dictate" / `~/.dictate` throughout — it's a
@@ -141,7 +141,7 @@ logging/debugging" is precisely this gap.
 that reached "listening" (realtimesst.log, 2026-07-01 09:14) captured
 `final audio length: 0` — the mic delivered nothing, i.e. no Microphone grant for the
 process identity that ran it. macOS attributes permission to the *owning app bundle*
-(Terminal.app for terminal runs, `ai.turkiye.dictate` for the .app). Grants do not
+(Terminal.app for terminal runs, `io.github.alperencngz.dictator` for the .app). Grants do not
 transfer between them. Historical note from this project: pynput's global hotkey listener
 is gated by **Accessibility** (not Input Monitoring), and a silently-toggled-off
 Accessibility entry for Terminal cost days. Symptom of a missing Accessibility grant:
@@ -173,7 +173,7 @@ polluting `git status`), `Contents/Resources` for Finder launches (py2app `no_ch
    (`./mac/build_app.sh`, seconds) only when `setup_app.py` / plist / launcher path
    changes. After a rebuild the bundle is replaced — macOS usually keeps TCC grants for
    the same bundle id at the same path, but if permissions behave oddly, reset:
-   `tccutil reset Accessibility ai.turkiye.dictate && tccutil reset Microphone ai.turkiye.dictate`,
+   `tccutil reset Accessibility io.github.alperencngz.dictator && tccutil reset Microphone io.github.alperencngz.dictator`,
    then re-grant.
 5. **Logs to watch** while working: `~/.dictate/dictate.log` (bundle launches;
    terminal runs print to stdout instead) and `realtimesst.log` in the process cwd
@@ -356,7 +356,7 @@ again (injection), or the focused app blocks synthetic ⌘V — try `insert_meth
 
 ### Phase 6 — Autostart — **DONE 2026-07-28**
 
-`mac/ai.turkiye.dictate.plist` (checked into the repo, symlinked from
+`mac/io.github.alperencngz.dictator.plist` (checked into the repo, symlinked from
 `~/Library/LaunchAgents/`): `ProgramArguments = [/usr/bin/open, -a,
 /Applications/Dictate.app]` (targets the installed app, not `dist/` — via `open` so
 LaunchServices owns the lifecycle), `RunAtLoad = true`, no `KeepAlive` (menu-bar Quit
@@ -420,5 +420,5 @@ stays authoritative). Loaded with `launchctl bootstrap gui/$(id -u) <plist>`.
 - [ ] Handoff message includes: `git log --oneline -8`, tail of `~/.dictate/dictate.log`
       from a successful .app session, and the user's literal confirmations for the
       [USER] gates.
-- [x] Phase 6 **[USER-confirmed 2026-07-28]**: `mac/ai.turkiye.dictate.plist` installed
+- [x] Phase 6 **[USER-confirmed 2026-07-28]**: `mac/io.github.alperencngz.dictator.plist` installed
       and bootstrapped; targets `/Applications/Dictate.app` (not `dist/`).

@@ -62,15 +62,15 @@ rm -rf /Applications/Dictator.app && cp -R dist/Dictator.app /Applications/
 ⚠️ **Rebuilding resets its Accessibility grant** (re-signing changes the bundle's
 identity). After a rebuild: System Settings → Privacy & Security → Accessibility →
 remove the old "Dictator" row → **+** → re-add `/Applications/Dictator.app` → toggle on.
-If it still fails after that, run `tccutil reset Accessibility ai.turkiye.dictator` first
+If it still fails after that, run `tccutil reset Accessibility io.github.alperencngz.dictator` first
 (clears a stale duplicate entry), then re-add.
 
 ## 🚀 Auto-start at login
 
-A LaunchAgent (`mac/ai.turkiye.dictator.plist`, symlinked into `~/Library/LaunchAgents/`)
+A LaunchAgent (`mac/io.github.alperencngz.dictator.plist`, symlinked into `~/Library/LaunchAgents/`)
 runs `open -a Dictator.app` — the same path as a Spotlight launch — on every login.
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictator.plist   # (re)load
-launchctl bootout gui/$(id -u)/ai.turkiye.dictator                                  # disable
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.alperencngz.dictator.plist   # (re)load
+launchctl bootout gui/$(id -u)/io.github.alperencngz.dictator                                  # disable
 ```

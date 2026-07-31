@@ -33,7 +33,7 @@ OPTIONS = {
     "plist": {
         "CFBundleName": "Dictator",
         "CFBundleDisplayName": "Dictator",
-        "CFBundleIdentifier": "ai.turkiye.dictator",
+        "CFBundleIdentifier": "io.github.alperencngz.dictator",
         "CFBundleVersion": "0.1.0",
         "CFBundleShortVersionString": "0.1.0",
         # Menu-bar agent: no Dock icon, no app-switcher entry (Gladio-like).

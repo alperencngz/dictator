@@ -56,8 +56,8 @@ no Dock icon, no window, by design (`LSUIElement`).
 **Auto-start at login** (so it's already running after every reboot, no manual launch):
 
 ```bash
-cp mac/ai.turkiye.dictator.plist ~/Library/LaunchAgents/   # or symlink it
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictator.plist
+cp mac/io.github.alperencngz.dictator.plist ~/Library/LaunchAgents/   # or symlink it
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.alperencngz.dictator.plist
 ```
 
 > **Rebuilding resets its Accessibility grant.** `build_app.sh` re-signs the bundle
@@ -65,7 +65,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.turkiye.dictator.plis
 > after every rebuild you must re-grant it: System Settings → Privacy & Security →
 > Accessibility → remove the old "Dictator" entry if present → **+** → re-add
 > `/Applications/Dictator.app` → toggle on. If it still won't take, run
-> `tccutil reset Accessibility ai.turkiye.dictator` first to clear a stale entry, then
+> `tccutil reset Accessibility io.github.alperencngz.dictator` first to clear a stale entry, then
 > re-add. Only rebuilding needs this — plain source edits don't.
 
 ## macOS permissions (one-time)

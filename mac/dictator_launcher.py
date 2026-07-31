@@ -5,7 +5,7 @@ stdout/stderr are redirected to ~/.dictator/dictator.log so a failed launch is
 debuggable, and the menu-bar (rumps) UI is forced on regardless of config.
 
 The whole point of running as a bundle: the app owns its own Accessibility /
-Microphone TCC identity (ai.turkiye.dictator), independent of whichever
+Microphone TCC identity (io.github.alperencngz.dictator), independent of whichever
 terminal happened to launch it — so the permission grant sticks.
 
 Everything with side effects lives inside main(), which only runs in the real
